@@ -1,0 +1,152 @@
+{
+  "scope": "REAL PUBLIC MARKET READS ONLY; isolated temporary observation store; no paper approval/order/fill",
+  "started_monitor_success": {
+    "state": "MONITORING",
+    "result": {
+      "cached": false,
+      "new": 8,
+      "message": "8 real pairs observed; no orders; missing evidence blocks all fills"
+    },
+    "successful_cycles": 1,
+    "attempted_cycles": 1,
+    "market_health": {
+      "status": "OK",
+      "utc": "2026-11-08T19:44:07.478777+00:00",
+      "pairs": 8,
+      "mints": [
+        "Aw8wMQoVE2fp7RKECDLwVmHQrx4KZ88J2DiaeFdPpump",
+        "2Sy3G53qeqDQctyhxwaGc7BRaQTRpwhJGQPo1FMSpump",
+        "3M1c7BqWVaChfRLtMc49XcQQXfajCTRVyZVoe45wpump",
+        "8wwBPfLtVwhzDEtDjEkKGojSo9WeGkr877C96dcjpump",
+        "3quBBtqaHHS7ex4rJaB5pEQNKrBmvU74HXgwnp8cpump",
+        "BYPPfvV8xdFeTS43nPFRZeLdJ8STPVELg7rvagtqpump",
+        "GdMjsTtrn3AKFHD8x3u15Hg6QLCWfXbdvPsofd83pump",
+        "2NNMnL71YRqvnkA1TPmJLawtnJW857Nvk6qauybxpump"
+      ],
+      "source": {
+        "url": "https://api.dexscreener.com/tokens/v1/solana/Aw8wMQoVE2fp7RKECDLwVmHQrx4KZ88J2DiaeFdPpump,2Sy3G53qeqDQctyhxwaGc7BRaQTRpwhJGQPo1FMSpump,3M1c7BqWVaChfRLtMc49XcQQXfajCTRVyZVoe45wpump,8wwBPfLtVwhzDEtDjEkKGojSo9WeGkr877C96dcjpump,3quBBtqaHHS7ex4rJaB5pEQNKrBmvU74HXgwnp8cpump,BYPPfvV8xdFeTS43nPFRZeLdJ8STPVELg7rvagtqpump,GdMjsTtrn3AKFHD8x3u15Hg6QLCWfXbdvPsofd83pump,2NNMnL71YRqvnkA1TPmJLawtnJW857Nvk6qauybxpump",
+        "fetched_utc": "2026-11-08T19:44:07.476407+00:00",
+        "http_date": "Sun, 08 Nov 2026 19:44:07 GMT",
+        "http_age": null,
+        "provider_observation_utc": null
+      },
+      "error": null
+    },
+    "pair_count": 8
+  },
+  "stopped_result": {
+    "state": "STOPPED",
+    "message": "Market monitor is stopped. No source read was requested."
+  },
+  "provider_calls": [
+    "https://api.dexscreener.com/token-profiles/latest/v1",
+    "https://api.dexscreener.com/tokens/v1/solana/Aw8wMQoVE2fp7RKECDLwVmHQrx4KZ88J2DiaeFdPpump,2Sy3G53qeqDQctyhxwaGc7BRaQTRpwhJGQPo1FMSpump,3M1c7BqWVaChfRLtMc49XcQQXfajCTRVyZVoe45wpump,8wwBPfLtVwhzDEtDjEkKGojSo9WeGkr877C96dcjpump,3quBBtqaHHS7ex4rJaB5pEQNKrBmvU74HXgwnp8cpump,BYPPfvV8xdFeTS43nPFRZeLdJ8STPVELg7rvagtqpump,GdMjsTtrn3AKFHD8x3u15Hg6QLCWfXbdvPsofd83pump,2NNMnL71YRqvnkA1TPmJLawtnJW857Nvk6qauybxpump"
+  ],
+  "stop_made_zero_market_reads": true,
+  "health": {
+    "status": "OK",
+    "utc": "2026-11-08T19:44:07.478777+00:00",
+    "pairs": 8,
+    "mints": [
+      "Aw8wMQoVE2fp7RKECDLwVmHQrx4KZ88J2DiaeFdPpump",
+      "2Sy3G53qeqDQctyhxwaGc7BRaQTRpwhJGQPo1FMSpump",
+      "3M1c7BqWVaChfRLtMc49XcQQXfajCTRVyZVoe45wpump",
+      "8wwBPfLtVwhzDEtDjEkKGojSo9WeGkr877C96dcjpump",
+      "3quBBtqaHHS7ex4rJaB5pEQNKrBmvU74HXgwnp8cpump",
+      "BYPPfvV8xdFeTS43nPFRZeLdJ8STPVELg7rvagtqpump",
+      "GdMjsTtrn3AKFHD8x3u15Hg6QLCWfXbdvPsofd83pump",
+      "2NNMnL71YRqvnkA1TPmJLawtnJW857Nvk6qauybxpump"
+    ],
+    "source": {
+      "url": "https://api.dexscreener.com/tokens/v1/solana/Aw8wMQoVE2fp7RKECDLwVmHQrx4KZ88J2DiaeFdPpump,2Sy3G53qeqDQctyhxwaGc7BRaQTRpwhJGQPo1FMSpump,3M1c7BqWVaChfRLtMc49XcQQXfajCTRVyZVoe45wpump,8wwBPfLtVwhzDEtDjEkKGojSo9WeGkr877C96dcjpump,3quBBtqaHHS7ex4rJaB5pEQNKrBmvU74HXgwnp8cpump,BYPPfvV8xdFeTS43nPFRZeLdJ8STPVELg7rvagtqpump,GdMjsTtrn3AKFHD8x3u15Hg6QLCWfXbdvPsofd83pump,2NNMnL71YRqvnkA1TPmJLawtnJW857Nvk6qauybxpump",
+      "fetched_utc": "2026-11-08T19:44:07.476407+00:00",
+      "http_date": "Sun, 08 Nov 2026 19:44:07 GMT",
+      "http_age": null,
+      "provider_observation_utc": null
+    },
+    "error": null
+  },
+  "sample_observations": [
+    {
+      "mint": "8wwBPfLtVwhzDEtDjEkKGojSo9WeGkr877C96dcjpump",
+      "pair": "2ALbpqkTMYwdZa3GvuATNDRBr42nu9no6eVHkG8Nh1ob",
+      "symbol": "KOL",
+      "quote_symbol": "SOL",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "venue": "pumpswap",
+      "price_usd": 3.21e-05,
+      "liquidity_usd": 12744.06,
+      "volume_h1_usd": 13815.22,
+      "url": "https://api.dexscreener.com/tokens/v1/solana/Aw8wMQoVE2fp7RKECDLwVmHQrx4KZ88J2DiaeFdPpump,2Sy3G53qeqDQctyhxwaGc7BRaQTRpwhJGQPo1FMSpump,3M1c7BqWVaChfRLtMc49XcQQXfajCTRVyZVoe45wpump,8wwBPfLtVwhzDEtDjEkKGojSo9WeGkr877C96dcjpump,3quBBtqaHHS7ex4rJaB5pEQNKrBmvU74HXgwnp8cpump,BYPPfvV8xdFeTS43nPFRZeLdJ8STPVELg7rvagtqpump,GdMjsTtrn3AKFHD8x3u15Hg6QLCWfXbdvPsofd83pump,2NNMnL71YRqvnkA1TPmJLawtnJW857Nvk6qauybxpump",
+      "fetched_utc": "2026-11-08T19:44:07.476407+00:00",
+      "http_date": "Sun, 08 Nov 2026 19:44:07 GMT",
+      "http_age": null,
+      "provider_observation_utc": null,
+      "field_sources": {
+        "mint": "baseToken.address",
+        "pair": "pairAddress",
+        "price_usd": "priceUsd",
+        "liquidity_usd": "liquidity.usd",
+        "volume_h1_usd": "volume.h1",
+        "venue": "dexId"
+      },
+      "price_kind": "provider indicative mark, NOT executable quote",
+      "risk": "BLIND / NO AUDIT"
+    },
+    {
+      "mint": "3M1c7BqWVaChfRLtMc49XcQQXfajCTRVyZVoe45wpump",
+      "pair": "3AFDKcqaFLPL2vHNSTWyPrudympQ64dpMx6njYa2USB8",
+      "symbol": "norm",
+      "quote_symbol": "SOL",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "venue": "pumpfun",
+      "price_usd": 2.609e-06,
+      "liquidity_usd": null,
+      "volume_h1_usd": 30033.37,
+      "url": "https://api.dexscreener.com/tokens/v1/solana/Aw8wMQoVE2fp7RKECDLwVmHQrx4KZ88J2DiaeFdPpump,2Sy3G53qeqDQctyhxwaGc7BRaQTRpwhJGQPo1FMSpump,3M1c7BqWVaChfRLtMc49XcQQXfajCTRVyZVoe45wpump,8wwBPfLtVwhzDEtDjEkKGojSo9WeGkr877C96dcjpump,3quBBtqaHHS7ex4rJaB5pEQNKrBmvU74HXgwnp8cpump,BYPPfvV8xdFeTS43nPFRZeLdJ8STPVELg7rvagtqpump,GdMjsTtrn3AKFHD8x3u15Hg6QLCWfXbdvPsofd83pump,2NNMnL71YRqvnkA1TPmJLawtnJW857Nvk6qauybxpump",
+      "fetched_utc": "2026-11-08T19:44:07.476407+00:00",
+      "http_date": "Sun, 08 Nov 2026 19:44:07 GMT",
+      "http_age": null,
+      "provider_observation_utc": null,
+      "field_sources": {
+        "mint": "baseToken.address",
+        "pair": "pairAddress",
+        "price_usd": "priceUsd",
+        "liquidity_usd": "liquidity.usd",
+        "volume_h1_usd": "volume.h1",
+        "venue": "dexId"
+      },
+      "price_kind": "provider indicative mark, NOT executable quote",
+      "risk": "BLIND / NO AUDIT"
+    },
+    {
+      "mint": "GdMjsTtrn3AKFHD8x3u15Hg6QLCWfXbdvPsofd83pump",
+      "pair": "58rCrBx8NAfDr3TJYRXbpiqSnFF36DsAvJuXkCFQ98YQ",
+      "symbol": "ELYOTC",
+      "quote_symbol": "SOL",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "venue": "pumpfun",
+      "price_usd": 1.311e-05,
+      "liquidity_usd": null,
+      "volume_h1_usd": 38023.69,
+      "url": "https://api.dexscreener.com/tokens/v1/solana/Aw8wMQoVE2fp7RKECDLwVmHQrx4KZ88J2DiaeFdPpump,2Sy3G53qeqDQctyhxwaGc7BRaQTRpwhJGQPo1FMSpump,3M1c7BqWVaChfRLtMc49XcQQXfajCTRVyZVoe45wpump,8wwBPfLtVwhzDEtDjEkKGojSo9WeGkr877C96dcjpump,3quBBtqaHHS7ex4rJaB5pEQNKrBmvU74HXgwnp8cpump,BYPPfvV8xdFeTS43nPFRZeLdJ8STPVELg7rvagtqpump,GdMjsTtrn3AKFHD8x3u15Hg6QLCWfXbdvPsofd83pump,2NNMnL71YRqvnkA1TPmJLawtnJW857Nvk6qauybxpump",
+      "fetched_utc": "2026-11-08T19:44:07.476407+00:00",
+      "http_date": "Sun, 08 Nov 2026 19:44:07 GMT",
+      "http_age": null,
+      "provider_observation_utc": null,
+      "field_sources": {
+        "mint": "baseToken.address",
+        "pair": "pairAddress",
+        "price_usd": "priceUsd",
+        "liquidity_usd": "liquidity.usd",
+        "volume_h1_usd": "volume.h1",
+        "venue": "dexId"
+      },
+      "price_kind": "provider indicative mark, NOT executable quote",
+      "risk": "BLIND / NO AUDIT"
+    }
+  ],
+  "paper_cash_unchanged": true,
+  "paper_drafts_count": 0,
+  "completed_utc": "2026-11-08T19:44:07.480840+00:00"
+}

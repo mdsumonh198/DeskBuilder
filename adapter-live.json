@@ -1,0 +1,187 @@
+{
+  "schema": "pumpgrok-cli-read-v4",
+  "received_utc": "2026-11-08T19:47:33.387163+00:00",
+  "source": "supported same-host operational CLI",
+  "connection": "CONNECTED READ-ONLY",
+  "effective_mode": "paper",
+  "desk_state": "HALTED",
+  "errors": [],
+  "receipts": {
+    "doctor": {
+      "command": [
+        "/workspace/pumpgrok/.venv/bin/pumpgrok",
+        "doctor"
+      ],
+      "cwd": "/workspace/pumpgrok",
+      "started_utc": "2026-11-08T19:47:30.812316+00:00",
+      "source": "supported local CLI",
+      "exit_code": 0,
+      "finished_utc": "2026-11-08T19:47:31.245303+00:00",
+      "stdout_hash": "f3d9c32858cc6c7c24458c733fb876606892a831129267fb5e71e987dafd2f45",
+      "stderr_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "state": {
+      "command": [
+        "/workspace/pumpgrok/.venv/bin/pumpgrok",
+        "state",
+        "status",
+        "--seat",
+        "chief"
+      ],
+      "cwd": "/workspace/pumpgrok",
+      "started_utc": "2026-11-08T19:47:31.245375+00:00",
+      "source": "supported local CLI",
+      "exit_code": 0,
+      "finished_utc": "2026-11-08T19:47:31.898009+00:00",
+      "stdout_hash": "4ac7f51b56d62ac9e65b8bb04cbf044c6732387e05b9269cee6f33f9e42cfa0e",
+      "stderr_hash": "646fc77b400691225c2d349c606145577671a194403a406945217e048da412ec"
+    },
+    "kill": {
+      "command": [
+        "/workspace/pumpgrok/.venv/bin/pumpgrok",
+        "killswitch",
+        "status"
+      ],
+      "cwd": "/workspace/pumpgrok",
+      "started_utc": "2026-11-08T19:47:31.898070+00:00",
+      "source": "supported local CLI",
+      "exit_code": 0,
+      "finished_utc": "2026-11-08T19:47:32.524956+00:00",
+      "stdout_hash": "7365bec27f5b7990c039a943ea4a8c035bc3d2d20e27da8784a792ba5782af97",
+      "stderr_hash": "5c043c4a8757a6f91f678a830202b3595dcddffe8032a83eb651d14ae15992ed"
+    },
+    "tickets": {
+      "command": [
+        "/workspace/pumpgrok/.venv/bin/pumpgrok",
+        "ticket",
+        "list"
+      ],
+      "cwd": "/workspace/pumpgrok",
+      "started_utc": "2026-11-08T19:47:32.525012+00:00",
+      "source": "supported local CLI",
+      "exit_code": 0,
+      "finished_utc": "2026-11-08T19:47:32.956567+00:00",
+      "stdout_hash": "f16fd54cdbc41063fb3f7a457006d6786e9b3a483b9605791429f1790f2b2799",
+      "stderr_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "portfolio": {
+      "command": [
+        "/workspace/pumpgrok/.venv/bin/pumpgrok",
+        "report",
+        "--daily"
+      ],
+      "cwd": "/workspace/pumpgrok",
+      "started_utc": "2026-11-08T19:47:32.956622+00:00",
+      "source": "supported local CLI",
+      "exit_code": 0,
+      "finished_utc": "2026-11-08T19:47:33.387106+00:00",
+      "stdout_hash": "278a7a4254c60f742d8d6f1fbd271ae46735d886d408f1a99bd42725c65c5f9a",
+      "stderr_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "capabilities": {
+    "state_read": true,
+    "halt_read": true,
+    "tickets_list": true,
+    "portfolio_report_read": true,
+    "ticket_scoped_full_risk_read": false,
+    "exact_approval_read": false,
+    "authenticated_gateway": false,
+    "can_place_orders": false
+  },
+  "agents": {
+    "CHIEF": "NOT CONNECTED",
+    "SCOUT": "NOT CONNECTED",
+    "RISK": "NOT CONNECTED",
+    "WHALE": "NOT CONNECTED",
+    "SHILL": "NOT CONNECTED",
+    "SIGNAL": "NOT CONNECTED",
+    "SNIPER": "NOT CONNECTED",
+    "RUG": "NOT CONNECTED",
+    "EXIT": "NOT CONNECTED",
+    "JOURNAL": "NOT CONNECTED"
+  },
+  "state": {
+    "meta": {
+      "source": "ledger",
+      "fetched_at": "2026-11-08T19:47:31.810474Z",
+      "freshness_s": 0.0,
+      "correlation_id": "01M6YB78V09GZ05Q914M5Q55G1.1",
+      "stale": false,
+      "reason": null
+    },
+    "halted": true,
+    "reasons": [
+      "kill_switch"
+    ],
+    "kill_switch_active": true,
+    "drawdown_halt": false,
+    "daily_loss_halt": false,
+    "breaker_open": false,
+    "effective_mode": "paper"
+  },
+  "kill": {
+    "meta": {
+      "source": "ledger",
+      "fetched_at": "2026-11-08T19:47:32.443501Z",
+      "freshness_s": 0.0,
+      "correlation_id": "01M6YB79ES9GZ05Q914M5Q55G1.1",
+      "stale": false,
+      "reason": null
+    },
+    "halted": true,
+    "reasons": [
+      "kill_switch"
+    ],
+    "kill_switch_active": true,
+    "drawdown_halt": false,
+    "daily_loss_halt": false,
+    "breaker_open": false,
+    "effective_mode": "paper"
+  },
+  "doctor": {
+    "exit_code": 0,
+    "scope": "Module availability check ONLY; not full prompt/skill/roster/grant health proof",
+    "mode": "paper",
+    "gateway": "NOT IMPLEMENTED",
+    "reports_module": "NOT IMPLEMENTED",
+    "health_server": "NOT SERVED"
+  },
+  "reported_policy": {
+    "max_trade_fraction": "0.02",
+    "max_token_fraction": "0.05",
+    "daily_loss_halt_fraction": "0.05",
+    "max_open_positions": "3",
+    "paper_equity_sol": "10",
+    "max_slippage_bps": "300"
+  },
+  "policy_status": "MISMATCH \u2014 installed engine reports 10 SOL equity and fraction limits, not the agreed $50 / $2.50 USD policy",
+  "ticket_count": 0,
+  "engine_portfolio": {
+    "source": "supported CLI daily report (source window is UTC, not a Dhaka-day risk verdict)",
+    "units": "SOL",
+    "authority": "Engine ledger report; separate from standalone USD paper ledger",
+    "available": true,
+    "mode": "paper",
+    "autonomy": "autonomous-paper",
+    "ledger_id": "01M6Y5CFMM9GZ05Q914M5Q55G1.1",
+    "ledger_seq": 3,
+    "equity_sol": "10.000000000",
+    "realized_sol": "0E-9",
+    "unrealized_sol": "0E-9",
+    "trades": 0,
+    "closed": 0,
+    "open_positions": 0,
+    "heartbeat_evidence": "NO HEARTBEATS RECORDED",
+    "market_tick_evidence": "NO MARKET TICKS RECORDED",
+    "risk_evidence": "NO VERDICTS RECORDED",
+    "source_report_utc_day": "2026-11-08"
+  },
+  "fill_blockers": [
+    "Authoritative desk halt is active",
+    "Installed CLI exposes status, kill, ticket listing and portfolio report, not full scoped risk/approval gateway",
+    "No genuine paper-execution integration is authorized by this read adapter",
+    "All ten assistants have no verified live connection; roster names are not liveness",
+    "MISMATCH \u2014 installed engine reports 10 SOL equity and fraction limits, not the agreed $50 / $2.50 USD policy"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/workspace/pumpgrok/.venv/bin/pumpgrok",
+    "killswitch",
+    "status"
+  ],
+  "cwd": "/workspace/pumpgrok",
+  "started_utc": "2026-11-08T19:38:04.829358+00:00",
+  "finished_utc": "2026-11-08T19:38:05.616698+00:00",
+  "exit_code": 0,
+  "stdout": "{\"meta\": {\"source\": \"ledger\", \"fetched_at\": \"2026-11-08T19:38:05.530378Z\", \"freshness_s\": 0.0, \"correlation_id\": \"01M6YANZTR9GZ05Q914M5Q55G1.1\", \"stale\": false, \"reason\": null}, \"halted\": true, \"reasons\": [\"kill_switch\"], \"kill_switch_active\": true, \"drawdown_halt\": false, \"daily_loss_halt\": false, \"breaker_open\": false, \"effective_mode\": \"paper\"}\n",
+  "stderr": "{\"correlation_id\":null,\"data\":{},\"event\":null,\"level\":\"INFO\",\"logger\":\"pumpgrok.tools\",\"mint\":null,\"mode\":\"paper\",\"msg\":\"operator registry effective budget={'max_trade_fraction': '0.02', 'max_token_fraction': '0.05', 'daily_loss_halt_fraction': '0.05', 'drawdown_halt_fraction': '0.15', 'max_open_positions': 3, 'max_trades_per_day': 20, 'liquidity_floor_multiple': 10, 'partial_fill_fraction': '0.02', 'paper_equity_sol': '10'} limits={'min_trade_lamports': 10000000, 'max_slippage_bps': 300, 'one_position_per_creator': True, 'daily_loss_basis': 'total', 'blind_max_s': 300.0, 'mtm_interval_s': 60.0, 'confirm_timeout_s': 30.0}\",\"profile\":\"paper\",\"seat\":null,\"ticket_id\":null,\"ts\":\"2026-11-08T19:38:05.305Z\"}\n{\"correlation_id\":\"01M6YANZTR9GZ05Q914M5Q55G1.1\",\"data\":{\"depth\":1,\"parent\":null,\"span\":\"risk.halt_status\"},\"duration_ms\":2.085,\"event\":\"span\",\"level\":\"INFO\",\"logger\":\"pumpgrok.spans\",\"mint\":null,\"mode\":\"paper\",\"msg\":\"span\",\"profile\":\"paper\",\"seat\":null,\"ticket_id\":null,\"ts\":\"2026-11-08T19:38:05.530Z\"}\n"
+}

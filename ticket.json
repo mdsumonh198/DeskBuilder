@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/workspace/pumpgrok/.venv/bin/pumpgrok",
+    "ticket",
+    "list"
+  ],
+  "cwd": "/workspace/pumpgrok",
+  "started_utc": "2026-11-08T19:38:05.616971+00:00",
+  "finished_utc": "2026-11-08T19:38:06.051156+00:00",
+  "exit_code": 0,
+  "stdout": "{\"ok\": true, \"tickets\": []}\n",
+  "stderr": ""
+}

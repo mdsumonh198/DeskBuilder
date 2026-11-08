@@ -1,0 +1,2 @@
+2026-11-09 01:46:33.005 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+PASS: actual CLI shown CONNECTED READ-ONLY / HALTED; engine 10 SOL separate from local $50; no source/order activation. Not a browser render test.

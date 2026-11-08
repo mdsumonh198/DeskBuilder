@@ -1,19 +1,41 @@
 
-test_proposal_view_blocks_ui_under_actual_global_halt_or_unknown_gate (test_deployment.DeploymentTests.test_proposal_view_blocks_ui_under_actual_global_halt_or_unknown_gate) ... 2026-11-09 01:25:51.633 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+test_proposal_view_blocks_ui_under_actual_global_halt_or_unknown_gate (test_deployment.DeploymentTests.test_proposal_view_blocks_ui_under_actual_global_halt_or_unknown_gate) ... 2026-11-09 01:48:08.926 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
 ok
-test_two_file_no_helper_package_english_dark_and_no_profit (test_deployment.DeploymentTests.test_two_file_no_helper_package_english_dark_and_no_profit) ... 2026-11-09 01:25:52.207 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+test_start_stop_native_controls_update_only_actual_fixture_reads (test_deployment.DeploymentTests.test_start_stop_native_controls_update_only_actual_fixture_reads) ... 2026-11-09 01:48:09.427 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
 ok
+test_two_file_no_helper_package_english_dark_and_no_profit (test_deployment.DeploymentTests.test_two_file_no_helper_package_english_dark_and_no_profit) ... 2026-11-09 01:48:09.997 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+ok
+test_app_settings_do_not_break_engine_unknown_env_validator (test_integration.AdapterTests.test_app_settings_do_not_break_engine_unknown_env_validator) ... ok
+test_clear_halt_is_not_full_trade_clearance (test_integration.AdapterTests.test_clear_halt_is_not_full_trade_clearance) ... ok
+test_conflicting_sources_not_clear (test_integration.AdapterTests.test_conflicting_sources_not_clear) ... ok
+test_doctor_exit_zero_is_not_complete_health (test_integration.AdapterTests.test_doctor_exit_zero_is_not_complete_health) ... ok
+test_fake_capability_claims_never_clear_risk_or_approvals (test_integration.AdapterTests.test_fake_capability_claims_never_clear_risk_or_approvals) ... ok
+test_genuine_recorded_reads_connect_readonly_halted (test_integration.AdapterTests.test_genuine_recorded_reads_connect_readonly_halted) ... ok
+test_live_mode_detected_without_forcing_paper (test_integration.AdapterTests.test_live_mode_detected_without_forcing_paper) ... ok
+test_no_private_key_signature_configuration_in_runtime (test_integration.AdapterTests.test_no_private_key_signature_configuration_in_runtime) ... ok
+test_no_roster_liveness_inference_and_separate_units (test_integration.AdapterTests.test_no_roster_liveness_inference_and_separate_units) ... ok
+test_only_exact_allowlisted_read_commands_no_shell (test_integration.AdapterTests.test_only_exact_allowlisted_read_commands_no_shell) ... ok
+test_stale_source_not_refreshed_by_new_receipt_time (test_integration.AdapterTests.test_stale_source_not_refreshed_by_new_receipt_time) ... ok
+test_timeout_failure_and_empty_report (test_integration.AdapterTests.test_timeout_failure_and_empty_report) ... ok
+test_unknown_boolean_missing_meta_and_malformed_json (test_integration.AdapterTests.test_unknown_boolean_missing_meta_and_malformed_json) ... ok
+test_unknown_cloud_is_disconnected_no_fallback (test_integration.AdapterTests.test_unknown_cloud_is_disconnected_no_fallback) ... ok
+test_unsafe_permissions_no_command_execution (test_integration.AdapterTests.test_unsafe_permissions_no_command_execution) ... ok
+test_failed_provider_is_real_failure_not_success_or_profit (test_integration.MonitorTests.test_failed_provider_is_real_failure_not_success_or_profit) ... ok
+test_start_actual_reads_counter_and_rerun_cooldown (test_integration.MonitorTests.test_start_actual_reads_counter_and_rerun_cooldown) ... ok
+test_stop_blocks_next_tick_and_restart_does_not_reset_counts (test_integration.MonitorTests.test_stop_blocks_next_tick_and_restart_does_not_reset_counts) ... ok
+test_stopped_performs_no_read (test_integration.MonitorTests.test_stopped_performs_no_read) ... ok
+test_unsafe_mode_stops_without_any_source_read (test_integration.MonitorTests.test_unsafe_mode_stops_without_any_source_read) ... ok
 test_approved_ticket_cannot_be_placed_by_other_visitor (test_paper_system.EngineTests.test_approved_ticket_cannot_be_placed_by_other_visitor) ... ok
-test_attestation_stale_future_expired_wrong_audience (test_paper_system.EngineTests.test_attestation_stale_future_expired_wrong_audience) ... ok
 test_buy_actual_valid_simulated_path (test_paper_system.EngineTests.test_buy_actual_valid_simulated_path) ... ok
 test_concurrent_single_fill (test_paper_system.EngineTests.test_concurrent_single_fill) ... ok
+test_contract_stale_future_expired_wrong_audience (test_paper_system.EngineTests.test_contract_stale_future_expired_wrong_audience) ... ok
 test_daily_halt_exits_still_require_global_gates (test_paper_system.EngineTests.test_daily_halt_exits_still_require_global_gates) ... ok
 test_daily_loss_and_restart_latch_no_reset (test_paper_system.EngineTests.test_daily_loss_and_restart_latch_no_reset) ... ok
 test_decision_rebinding (test_paper_system.EngineTests.test_decision_rebinding) ... ok
 test_expired_approval_and_quote (test_paper_system.EngineTests.test_expired_approval_and_quote) ... ok
 test_exports_and_source_provenance (test_paper_system.EngineTests.test_exports_and_source_provenance) ... ok
-test_forbidden_audit_blocks_before_fill_even_with_signed_risk (test_paper_system.EngineTests.test_forbidden_audit_blocks_before_fill_even_with_signed_risk) ... ok
-test_global_kill_wins_even_signed_clear (test_paper_system.EngineTests.test_global_kill_wins_even_signed_clear) ... ok
+test_forbidden_audit_blocks_before_fill_even_with_test_risk (test_paper_system.EngineTests.test_forbidden_audit_blocks_before_fill_even_with_test_risk) ... ok
+test_global_kill_wins_even_test_clear (test_paper_system.EngineTests.test_global_kill_wins_even_test_clear) ... ok
 test_hash_tamper_fails_startup (test_paper_system.EngineTests.test_hash_tamper_fails_startup) ... ok
 test_initial_capital_no_seed_profit (test_paper_system.EngineTests.test_initial_capital_no_seed_profit) ... ok
 test_insufficient_cash_reconciled (test_paper_system.EngineTests.test_insufficient_cash_reconciled) ... ok
@@ -23,6 +45,7 @@ test_marks_wrong_pair_stale_and_time_reversal (test_paper_system.EngineTests.tes
 test_max_size_and_slippage_edges (test_paper_system.EngineTests.test_max_size_and_slippage_edges) ... ok
 test_missing_approval (test_paper_system.EngineTests.test_missing_approval) ... ok
 test_missing_full_risk_or_holder_social (test_paper_system.EngineTests.test_missing_full_risk_or_holder_social) ... ok
+test_mutated_test_provider_not_trusted (test_paper_system.EngineTests.test_mutated_test_provider_not_trusted) ... ok
 test_no_approval_extension (test_paper_system.EngineTests.test_no_approval_extension) ... ok
 test_partial_and_full_future_exit_basis_pnl (test_paper_system.EngineTests.test_partial_and_full_future_exit_basis_pnl) ... ok
 test_per_mint_pyramiding_cap (test_paper_system.EngineTests.test_per_mint_pyramiding_cap) ... ok
@@ -33,16 +56,15 @@ test_reconcile_no_resend (test_paper_system.EngineTests.test_reconcile_no_resend
 test_restart_and_idempotence (test_paper_system.EngineTests.test_restart_and_idempotence) ... ok
 test_sell_at_future_quote_not_reused_buy_quote (test_paper_system.EngineTests.test_sell_at_future_quote_not_reused_buy_quote) ... ok
 test_sell_without_holdings (test_paper_system.EngineTests.test_sell_without_holdings) ... ok
-test_signed_config_mismatch (test_paper_system.EngineTests.test_signed_config_mismatch) ... ok
 test_slippage_rejected_not_fixed_3percent_loss (test_paper_system.EngineTests.test_slippage_rejected_not_fixed_3percent_loss) ... ok
 test_stale_open_position_marks_block_entries (test_paper_system.EngineTests.test_stale_open_position_marks_block_entries) ... ok
+test_testprovider_config_mismatch (test_paper_system.EngineTests.test_testprovider_config_mismatch) ... ok
 test_three_positions_cap (test_paper_system.EngineTests.test_three_positions_cap) ... ok
 test_timezone_and_drawdown (test_paper_system.EngineTests.test_timezone_and_drawdown) ... ok
 test_unauthenticated_and_wrong_owner_cannot_approve (test_paper_system.EngineTests.test_unauthenticated_and_wrong_owner_cannot_approve) ... ok
 test_unknown_cloud_status (test_paper_system.EngineTests.test_unknown_cloud_status) ... ok
 test_unknown_marks_no_zero_equity (test_paper_system.EngineTests.test_unknown_marks_no_zero_equity) ... ok
 test_unpromoted_strategy (test_paper_system.EngineTests.test_unpromoted_strategy) ... ok
-test_unsigned_and_tampered_attestation (test_paper_system.EngineTests.test_unsigned_and_tampered_attestation) ... ok
 test_withdrawn_before_and_after_approval (test_paper_system.EngineTests.test_withdrawn_before_and_after_approval) ... ok
 test_wrong_audit_mint_and_tamper_block_actual_approval (test_paper_system.EngineTests.test_wrong_audit_mint_and_tamper_block_actual_approval) ... ok
 test_wrong_hash_confirmation_and_approval_id (test_paper_system.EngineTests.test_wrong_hash_confirmation_and_approval_id) ... ok
@@ -68,7 +90,7 @@ test_token2022_missing_inventory_unknown_hook_and_fee_schema (test_paper_system.
 test_transfer_fee_negative_and_noninteger_blind (test_paper_system.EvidenceTests.test_transfer_fee_negative_and_noninteger_blind) ... ok
 
 ----------------------------------------------------------------------
-Ran 65 tests in 1.216s
+Ran 86 tests in 1.731s
 
 OK
 

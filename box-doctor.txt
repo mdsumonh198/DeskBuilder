@@ -1,0 +1,12 @@
+[box-doctor] PASS machine-id: /etc/machine-id holds a valid 32-char id and /var/lib/dbus/machine-id agrees
+[box-doctor] PASS chrome: Google Chrome 156.0.8078.47 
+[box-doctor] PASS chrome-fds: 2 browser process(es); worst pid 139611 at 214/524288 open files (0%)
+[box-doctor] PASS egress: reached https://www.google.com/generate_204
+[box-doctor] PASS clock: system clock at 2026-11-08T19:43:11Z (skew +0s vs https://www.google.com)
+[box-doctor] PASS dbus: session bus present (DBUS_SESSION_BUS_ADDRESS set)
+[box-doctor] PASS xvfb: X display :8 responds (xdpyinfo)
+[box-doctor] PASS x11vnc: VNC server listening on 5900
+[box-doctor] PASS novnc: noVNC websockify listening on 6080
+[box-doctor] PASS novnc-forks: fork noVNC websockify listening on 6081
+[box-doctor] PASS compositor: window manager (xfwm4) + compositor (picom) running on :8
+[box-doctor] SUMMARY: 11 checks, 0 failed

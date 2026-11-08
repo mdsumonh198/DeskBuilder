@@ -1,25 +1,42 @@
-# Market Scanner v2 • English / Dark
+# PumpGrok Paper System v3 — English / Dark / Single File
 
-**This is the current real-data application, not the previous synthetic demo.**
-The UI is English-only, with a deep navy/cyan/emerald crypto terminal theme.
-Verify the visible version marker: `Market Scanner v2 • English / Dark`.
-All ten assistant Bots remain NOT CONNECTED, and all paper fills remain EXECUTION LOCKED.
-A new database starts with $50 paper capital and no trades or invented profit.
+This is now an implemented local **modeled paper broker**, not only a scanner UI.
+It is **not activated for real-source fills**: the actual desk halt is active, the
+sanctioned gate bridge is absent, effective policy agreement is unverified, and
+full RISK/rule-promotion evidence is missing. No runtime fill was approved or placed.
+There are no wallets, transaction construction, chain simulation, signing,
+broadcasting, live order endpoints, autonomous scans, schedules or real money.
+All ten actual assistant Bots remain **NOT CONNECTED**.
 
-## Updating an older deployment
+## Deploy using only two files
 
-Download and extract the complete ZIP, then replace **all** application files:
-`trading_terminal.py`, `requirements.txt`, `market_paper_terminal/`, and the root
-`.streamlit/config.toml`. Keep the helper package alongside the entrypoint.
-Do not just replace an old screenshot/demo file or refresh an unchanged deployment.
-The ZIP contains no private database, credentials, environment or old demo backups.
-If you already have a real research SQLite database, preserve it; the UI presents
-legacy localized entries in English without altering the original evidence.
-Never import the old synthetic demo ledger as real market results.
+Required at the app root:
 
-### Windows Terminal / PowerShell
+```text
+trading_terminal.py
+requirements.txt
+```
 
-Open Terminal in the extracted folder:
+No helper package, local module, repository checkout, encoded bundle, `eval` or
+`exec` is needed. Python 3.11+ recommended. Optional `.streamlit/config.toml`
+sets the native theme; inline CSS supplies readable dark defaults without it.
+
+### Local Linux/macOS
+
+```bash
+cd /path/to/extracted/folder
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m streamlit run trading_terminal.py
+```
+
+If your environment is already installed:
+
+```bash
+streamlit run trading_terminal.py
+```
+
+### Windows
 
 ```powershell
 py -m venv .venv
@@ -27,83 +44,192 @@ py -m venv .venv
 .\.venv\Scripts\python.exe -m streamlit run trading_terminal.py
 ```
 
-This does not require PowerShell script activation. Open the Local URL printed by
-Streamlit, normally http://localhost:8501 on that Windows computer. Stop the old
-app with Ctrl+C before starting the replacement on the same port.
+Open the local URL printed by Streamlit. `localhost` points to the machine
+running Streamlit, not another computer. No public tunnel is configured.
 
 ### Streamlit Community Cloud
 
-1. Replace all app/module/requirements files in your deployment's existing source
-   repository, including `.streamlit/config.toml` in its root. Upload source files,
-   not the ZIP as the app entrypoint. No personal runtime database or secrets are needed.
-2. Set the main file path to `trading_terminal.py` and install `requirements.txt`.
-3. Redeploy/reboot the app so the dark theme configuration is loaded, then hard-refresh.
-4. Confirm the new English/Dark version marker, real sources, $50 new-account
-   paper cash, and execution-lock notice. Old synthetic trades must not appear.
+1. Replace **both root files** in your existing app repository. The ZIP itself
+   is not an entrypoint. Do not merely refresh the old app.
+2. Set main file path to `trading_terminal.py` and reboot/redeploy so updated
+   requirements install. The optional `.streamlit/config.toml` goes at root.
+3. Look for **Paper System v3 • English / Dark • Single File**.
+4. Start with **Run Scanner Cycle**. It reads public Solana pair observations.
+5. Authority evidence and route quotes are explicit read-only button actions.
+   **A working scanner or quote is not authorization to fill an order.**
 
-The cloud filesystem may reset on redeploy/reboot; SQLite durability only applies
-while its file is retained. Use a properly managed persistent volume/store before
-relying on hosted history across instance replacement. This package does not add one.
+Actual Community Cloud deployment is not verified by the local AppTest.
+Never expect an absent box-local halt file on Cloud to mean the desk is clear.
 
-The shipped `.streamlit/config.toml` applies only in your extracted deployment
-root. No shared global config or browser/proxy settings were changed on the box.
-The existing root app additionally supplies dark CSS and explicitly dark charts/cells.
+## What the implemented code does
 
----
+- Real DexScreener latest-profile discovery and exact-mint/pair observations;
+  source URLs, fetched UTC, HTTP Date/Age and separate UNKNOWN market event time.
+  No fake price or synthetic fallback. The discovery universe is not all launches.
+- Public finalized Solana `getAccountInfo` with parsed mint-program/authority/
+  initialization/decimals checks and conservative Token-2022 extension parsing.
+  A passing subset is **not** a complete RISK Bot verdict. Unknown parser,
+  extension inventory, mutable tax, hook, permanent delegate or other unsupported
+  security extension blocks fills. Active mint/freeze authority and positive
+  older/newer transfer-fee schedules are forbidden.
+- Genuine Jupiter Swap v2 **quote-only** requests without a `taker`. Unexpected
+  wallet/transaction fields reject the response. Fee, mint, exact input amount,
+  route graph/allocation, output atomic units, impact, expiry and provenance are
+  checked. Public unauthenticated reads worked during the receipt run despite
+  documentation listing an API key. No market API credential is configured or required by
+  this build. If the host later requires auth, requests stop; an owner-authorized
+  read-only credential integration would be a separate step, never a bypass.
+- **Quote → local deterministic simulation → exact approval → atomic local fill**
+  is executable code. Genuine route output is still informational, not a promise
+  of execution. This is a MODELED fill: 25bp adverse buffer, plus an additional
+  conservative estimated 30bp + $0.01 fee reserve. Route fees are already reflected
+  in route output; the additional reserve deliberately overstates ancillary costs.
+  No actual network/gas fee or chain landing is asserted. Nonzero quoted network/rent
+  fees are rejected until a fresh verified SOL/USD cost-conversion adapter exists;
+  the fixed reserve is never silently substituted for known large gas costs. USDC is assumed near $1;
+  source USD deviation above 0.5% blocks. BUY budgets use nominal USDC units.
+- Known pool liquidity ≥ $10,000 and size ≤ 0.1% of pool liquidity are required.
+  A real route quote at exact size is depth-at-size evidence, **not** a complete
+  orderbook/liquidation-depth audit. Missing route/liquidity/fee evidence blocks.
+- SQLite `paper_events_v1` is additive and independent of old research observations,
+  draft tickets and legacy cash. Old observations never become fills. Genesis is
+  exactly $50 simulated cash, no seed profit or fabricated trade history.
+- Append-only triggers, contiguous sequence/hash-chain validation and replayed
+  approval/position/basis/cash reconciliation run at startup/read. Decimal strings
+  (USD rounded to 8 decimal places, quantity bounded to mint precision) avoid SQL
+  floating-point cash drift. Every approval, order, fill, mark, equity valuation,
+  withdrawal and halt is auditable. Fill records carry source quote URLs and
+  verified gate evidence/signature/public verification key for later audit.
+- `BEGIN IMMEDIATE` plus unique decision IDs serializes competing sessions. A
+  repeat successful decision returns the committed original fill, not a second
+  order. Binding changes, stale/withdrawn/missing approvals block. Ambiguous I/O
+  becomes **UNKNOWN RESULT**: read-only reconcile by decision id; never auto-retry.
+- BUY deducts notional plus modeled fee; partial/full SELL uses a new fresh quote,
+  weighted average cost basis and modeled proceeds minus fees. Positions survive
+  restarts. Overselling, negative cash and extra seed capital are rejected.
+- Fees, realized/unrealized P&L, gross-before-charged-fees/net marked equity,
+  estimated remaining exit costs, daily loss and peak-to-current drawdown are
+  separate. Indicative marks do not guarantee liquidation equity. Missing marks
+  yield UNKNOWN equity; stale marks are explicitly not fresh and block new entries.
+- CSV/JSONL exports for all events/orders/approvals/fills/marks/equity, plus a JSON
+  portfolio/drawdown summary. Research observations remain separate in SQLite.
 
-# PumpGrok real-market research terminal — paper execution LOCKED
+## Limits and strategy rules
 
-This replaces the previous synthetic demo. It is a working **real public market scanner and durable research-ticket UI**, not a completed paper trading desk/broker integration.
+Exact owner limits: $50 initial paper capital, $2.50 maximum notional **per BUY or
+SELL action**, 3% maximum adverse slippage, three concurrent mints, and a $2.50
+daily realized-plus-unrealized loss entry halt. The cap is not a fixed 3% loss
+applied to every fill. Repeated adds cannot pyramid a mint beyond the conservative
+$2.50 basis limit. Fees may make an initial $2.50 order's basis slightly higher.
 
-## Run
-From the folder containing `trading_terminal.py`:
+Daily boundaries are **Asia/Dhaka (UTC+6)**. The prior recorded fresh daily close
+sets next day's baseline, conservatively never below $50. This is manually sampled
+valuation, not a guaranteed midnight mark. The first baseline is $50. A $2.50 loss
+latches entries for that calendar day, even if marks later recover, across reruns,
+new tabs and process restarts while the ledger file remains. No reset button exists.
+Global halt overrides BUY and SELL; the daily entry halt alone does not authorize
+an exit or bypass other gates. Stale marks block entries; exact fresh SELL quotes
+are still mandatory. No continuous risk monitor is running. Drawdown uses the
+highest recorded fresh net equity (at least $50); a zero denominator is UNKNOWN,
+never infinity or an invented percentage.
 
-```bash
-python3 -m venv .terminal-venv
-source .terminal-venv/bin/activate
-pip install -r requirements.txt
-streamlit run trading_terminal.py
-```
+Research entry filter: observed liquidity ≥ $10,000 and 1h volume ≥ $1,000.
+Proposed -10% stop / +20% take-profit are **research notes only**, not automatic
+orders or approved strategies. Missing fields are BLIND. Passing unit fixtures
+is software validation, **not market replay, a profitable backtest or permission
+for strategy promotion**. Recorded-market replay and explicit human promotion
+must precede real-source paper tickets. No win-rate or video ROI claim is copied.
 
-Existing box environment: `cd /workspace && source .terminal-venv/bin/activate && streamlit run trading_terminal.py`.
-The already-running box service uses port 8501; do not start a second instance on that port. Refresh its page to load the new application.
+## Genuine activation/integration prerequisites — currently NOT satisfied
 
-Keep `market_paper_terminal/` beside the entrypoint. SQLite automatically initializes at `market_paper_terminal/data/terminal.sqlite3`. Optional `PUMPGROK_TERMINAL_DB` selects a separate local research database (useful for tests). No credentials, wallet, or account connection required.
+This package does not contain or install a bridge into the real desk. It cannot
+clear the halt, modify risk policy or claim other assistant activity.
 
-## What really works
-- Native Run Scanner Cycle issues read-only documented DexScreener requests:
-  - `GET https://api.dexscreener.com/token-profiles/latest/v1`
-  - `GET https://api.dexscreener.com/tokens/v1/solana/{comma-separated-mint-addresses}`
-- Latest Solana profiles discover up to eight exact 32-byte base58 mints; pair records must match those base mints. Profiles are not an exhaustive market scan or guaranteed latest launch feed; token symbols/names are unverified labels, not identity.
-- Provider price, liquidity USD, hour-volume USD, venue, exact mint/pair, source URL, JSON field provenance, HTTP cache metadata, and retrieval UTC are retained. Missing values stay missing/BLIND. No synthetic fallback.
-- Only user clicks fetch; global SQLite 30-second cooldown avoids request flooding across sessions. Cached reruns do not add scanned counts. Unique observed pair count is not a cumulative fake scan counter. Identical snapshots deduplicate persistently.
-- Code actions are logged in English with Asia/Dhaka timestamps; all ten assistant seats explicitly show NOT CONNECTED. Code scanner actions are not falsely attributed to Bots.
-- Provider errors retain last-good observations and their original fetch times. HTTP 403/451, proxy denial or explicit block latches requests off; no alternate network route is attempted. No automatic retry.
-- Observations older than 60 seconds are STALE. “Recent retrieval” is not proof that a price itself is recent: the API does not provide an observation timestamp. Single-provider marks are NOT independently corroborated and NOT executable quotes.
-- Durable, idempotent local research drafts capture exact mint, pair, side, USD size and maximum slippage. They are NOT approved tickets or fills.
-- Distinct new ledger initializes with exactly $50 illustrative paper cash, no trades, no positions, no fees, no gains. Old synthetic history is not imported or reused.
+1. Owner authorizes a sanctioned read-only integration from the actual desk.
+2. Owner uses the desk's separate human procedure for any halt/config changes.
+   The active halt is NOT cleared by this app. Reported legacy effective defaults
+   must be reconciled to the exact USD policy; editing a note is not verification.
+3. That integration publishes short-lived Ed25519-signed **public gate attestations**
+   from authoritative current state, full RISK evidence and genuine owner receipts.
+   Only a public verification key is used here; this app has no signing key.
+   Do not generate your own fake CLEAR file or enable a TEST fixture in deployment.
+4. Genuine recorded replay + human rule/model promotion and mint/pair/audit-scoped
+   full RISK CLEAR, including holder/social/all mandatory checks, must be evidenced.
+5. Fresh real source market, authority subset and quote must pass together.
+6. Provision owner-only Streamlit OIDC access through the supported authentication
+   setup (Authlib is declared). Set public identity selectors `PUMPGROK_OWNER_ISSUER`
+   and `PUMPGROK_OWNER_SUBJECT` to the owner. The signed bridge must bind
+   `owner_identity_hash = sha256(canonical({issuer, subject}))`. The app reads only
+   verified identity claims, checks issuance/expiry/not-before, and never reads or
+   displays raw tokens. No authentication is provisioned by this package. The
+   native Owner Sign-In button requires separately owner-approved OIDC configuration.
+   An anonymous public visitor cannot approve or place even if all market gates pass.
+7. The authenticated owner inspects the exact proposal, types `CONFIRM PAPER <decision_id>`, presses
+   **Approve Exact Paper Ticket**, then separately **Place Approved Simulated Order
+   ONCE** before quote/approval expiry (≤30 seconds). Approval binds the entire
+   ticket, mint/pair/side/amount/quantity/slippage/quote version+expiry/audit/rule/id.
+   No automatic-paper authority is inferred from historical engagement notes.
 
-## Why trades remain locked
-This app does not implement an alternative broker around the real desk's halt. `/workspace/pumpgrok/var/desk/KILLSWITCH` is checked by presence only, read-only. Missing file means UNKNOWN, never “clear.” No engine source/configuration/key files are opened or modified.
+Read-only verifier contract for future sanctioned integration:
 
-All paper buys **and sells** are unconditionally locked because the desk execution adapter is absent. The UI additionally explains the actual halt, unverified effective configuration, absent executable quote/simulation, missing exact human approval and BLIND mandatory audit evidence. There is no enable/clear-halt/live toggle.
+- `PUMPGROK_GATE_ATTESTATION`: path to an envelope with `payload` and base64 `signature`.
+- `PUMPGROK_GATE_PUBLIC_KEY`: owner-provisioned hex Ed25519 **public verification** key.
+  These are integration configuration, not UI bypass switches or wallet credentials.
+- Signature covers canonical sorted compact ASCII JSON (`canonical(payload)`).
+- Required payload: audience `pumpgrok-standalone-paper-v3`, issued UTC within 30s,
+  expires UTC in the future and within 60s, `authoritative: true`, authoritative
+  `halt: CLEAR`, nonempty evidence/owner-authorization receipt IDs, a 64-hex `owner_identity_hash`, exact `POLICY`,
+  strategy version `RULES`, replay/human promotion true and exact `MODEL`.
+- `risk[mint]` must carry exact pair, current authority `audit_id`, `verdict: CLEAR`,
+  and true holders/social/all-mandatory evidence flags. These are signed facts from
+  a sanctioned bridge, never values a UI checkbox can assert.
+- Presence of `/workspace/pumpgrok/var/desk/KILLSWITCH` wins even over signed evidence.
+  Absence is not clearance: missing/invalid/stale signatures still block everything.
+- Full exact schemas and validation logic are readable in `DeskEvidence.read` and
+  `PaperBroker._checks`. Upstream bridge implementation/integration remains a blocker;
+  there is no claim that signing an arbitrary local document proves real desk state.
 
-The owner limits represented in validation are $50 paper capital, $2.50 maximum trade, 3% maximum slippage, at most three open positions, and a $2.50 daily realized-plus-unrealized loss entry freeze. Active mint/freeze authorities or Token-2022 transfer tax are forbidden. This does **not** prove the real engine has matching settings. The app does not infer permission from an autonomous-paper configuration note.
+## Persistence and backup
 
-DexScreener does not supply genuine mint/freeze/Token-2022 extension audit or holder/cluster/social/route evidence. These are explicitly BLIND and block execution. “Confirmed rugs blocked” remains zero; missing evidence is not proof of a rug.
+Default: `terminal_data/terminal.sqlite3` beside the script. Set
+`PUMPGROK_TERMINAL_DB` to a writable durable mounted-volume path on a suitable host.
+The new event table is additive; existing observations/drafts are preserved.
+Back up the SQLite file with a proper SQLite backup/snapshot while running and
+export JSONL/CSV regularly. No DB, secret, cache, virtualenv or test signer is
+included in the ZIP. Disk-administrator tampering/truncation is not magically
+prevented by a local hash chain; retain independent exported heads/backups.
 
-### Remaining integration work (not completed)
-Sanctioned core engine connection; authoritative engagement/halt/config agreement; genuine risk/holder/social evidence; fresh same-mint executable route/depth/fee quote; quote → simulate → exact manually approved idempotent paper fill; restart reconciliation; portfolio marks/unrealized P&L and fee accounting; daily loss tracking on actual paper positions. Until then, the chart contains only the initial paper capital point. No real or paper order-placement implementation exists here.
+**Streamlit Community Cloud local storage can disappear** during instance
+replacement/redeploy. Losing the file loses history, approvals and local daily
+latches. This is not a hosted durable production database. Do not enable a gated
+paper deployment on ephemeral disk without an owner-approved durable persistence
+and recovery design. Disconnected Cloud defaults always remain blocked.
 
 ## Verification
+
 ```bash
-python -m unittest market_paper_terminal.test_core
-python -m market_paper_terminal.test_app
-python -m py_compile trading_terminal.py market_paper_terminal/core.py
+python -m unittest discover -s tests -p 'test_*.py' -v
 ```
-Offline tests use isolated temporary databases and explicitly named fixtures, never production fake-market fallbacks. Checks cover parsing, missing/malformed data, same-mint filtering, stale evidence, error retention, blocked-provider stop, cooldown, snapshot/draft deduplication across reopen, limits, global-halt no-bypass and Streamlit initial/scan/draft behavior without fills.
-`network-smoke.json` records one genuinely successful public read made during setup. It is timestamped historical evidence, not a live feed or a seed fallback. Source archive excludes runtime DB, old demo code and environment.
 
-Official API documentation: https://docs.dexscreener.com/api/reference
+Tests use temporary isolated TEST ledgers and engineered deterministic provider
+fixtures; their returns are not investment performance. Test-only non-wallet
+attestation signers exercise signature verification, and never ship a private key.
+The deployment test begins with only the two required files, no helper package or
+project PYTHONPATH, and exercises Streamlit AppTest twice. Optional read-only smoke:
 
-No browser accessibility or visual-rendering verification is claimed from HTTP health alone.
+```bash
+python tests/smoke_public_reads.py
+```
+
+It probes documented providers once each, stops failures, and records a local model
+**preview**, never an approval/order/fill. See `evidence/receipt.json`, test output,
+and `evidence/public-read-smoke.json`. Actual real-source fill validation is blocked
+by genuine desk gates, not faked by testing. Existing local Streamlit health may be
+OK without proving the user's remote browser can access it.
+
+Official documentation:
+- https://docs.dexscreener.com/api/reference
+- https://solana.com/docs/rpc/http/getaccountinfo
+- https://www.solana-program.com/docs/token-2022/extensions
+- https://dev.jup.ag/api-reference/swap/v2/order
+- https://docs.streamlit.io/develop/api-reference/user/st.user

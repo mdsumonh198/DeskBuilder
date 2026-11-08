@@ -1,19 +1,64 @@
 {
-  "component": "standalone real public market scanner / research drafts",
-  "paper_execution": "NOT IMPLEMENTED; unconditionally locked",
-  "source": "DexScreener official public API",
-  "validated_real_pairs_smoke": 7,
-  "onchain_audit": "BLIND / not implemented",
-  "desk_integration": "NOT CONNECTED",
-  "safety": "No real desk source/config/keys changed; global halt untouched; no orders or approvals",
-  "tests": [
-    "compile",
-    "4 offline core tests",
-    "Streamlit AppTest idle, cached scan, duplicate draft with no fills"
+  "version": "Paper System v3 / English / Dark / Single File",
+  "generated_utc": "2026-11-08T19:25:51.238021+00:00",
+  "scope": "Standalone app only. No PumpGrok repo code inspected or changed. No real-world approval/order/fill or wallet/transaction action.",
+  "implemented": [
+    "Documented real discovery/mint market reads",
+    "Finalized mint authority and conservative Token-2022 subset audit",
+    "Genuine Jupiter quote-only reader; local adverse/fee paper simulation",
+    "Authenticated owner exact approvals and signed authoritative gate verifier",
+    "Atomic append-only SQLite paper orders/fills/positions/fees/marks/exits",
+    "Decimal P&L/basis and stale-mark-aware equity/drawdown",
+    "USD policy caps and persistent Asia/Dhaka daily entry halt",
+    "Concurrent decision idempotence, restart replay and UNKNOWN RESULT reconciliation",
+    "CSV/JSONL and portfolio summary exports"
   ],
-  "browser_verified": false,
-  "ui_version": "Market Scanner v2 \u2022 English / Dark",
-  "presentation_tests": "English-only rendered controls/logs/tables/JSON and empty/data/error states passed; originals retained",
-  "theme": "Deep navy with emerald/cyan; explicit dark Plotly/cell styling; packaged native dark config",
-  "style_update_made_no_provider_probe": true
+  "verification": {
+    "unittest_count": 65,
+    "unittest_result": "PASS",
+    "app_tests": "2 AppTest cases, plus independent empty-PYTHONPATH two-file subprocess; no helper package",
+    "static_check": "No real transaction submission/build endpoints or eval/exec in app",
+    "valid_fill_path": "Engineered TEST fixtures only: BUY, partial SELL, full SELL, exact authenticated fixture approvals, reconciliation",
+    "network_read_status": {
+      "dexscreener": "READ SUCCESS",
+      "solana_rpc": "READ SUCCESS",
+      "jupiter": "READ SUCCESS"
+    },
+    "real_source_local_model_preview": "PASS; real market/RPC/Jupiter observations; no approval/order/fill/ledger write",
+    "strategy_profitability": "NOT TESTED / no recorded-market strategy replay or genuine performance claim",
+    "streamlit_cloud": "NOT DEPLOYED OR VERIFIED",
+    "fee_safety": "Nonzero signature/priority/rent lamports blocked pending fresh verified SOL/USD conversion; not silently replaced by flat reserve",
+    "owner_access": "Anonymous/wrong owner approval and placement rejected; real OIDC still unconfigured"
+  },
+  "current_blockers": [
+    "Actual global KILLSWITCH file present; all buys/sells blocked",
+    "Sanctioned authoritative signed desk bridge not installed/provisioned",
+    "Effective owner USD policy agreement unverified; reported legacy mismatch unresolved",
+    "Separate full RISK/holders/social/all-mandatory clearance absent",
+    "Genuine recorded replay + owner rule/model promotion absent",
+    "Owner OIDC identity configuration/integration absent; anonymous approval prohibited",
+    "All ten assistant Bots NOT CONNECTED",
+    "Streamlit Cloud ephemeral disk requires owner-approved durable persistence/recovery before activated gated deployment"
+  ],
+  "manual_flow_after_genuine_prerequisites": "Scan/refresh -> authority subset -> quote/save proposal -> authenticated owner inspects exact ticket -> type CONFIRM PAPER decision_id -> Approve -> separate Place ONCE before expiry -> reconcile ledger. No autonomy.",
+  "service": "Existing detached process 142768 left running; local health endpoint OK. No remote browser/Cloud accessibility guarantee.",
+  "commands": {
+    "install": "python -m pip install -r requirements.txt",
+    "run": "python -m streamlit run trading_terminal.py",
+    "tests": "python -m unittest discover -s tests -p test_*.py -v"
+  },
+  "files_sha256": {
+    "trading_terminal.py": "798f8c66d9495702744ee2870f09c6521889ac5083b83a0031540d565a24c24d",
+    "requirements.txt": "71131ac327868d3816e347f97d45385e77329945f7a3a7c3386203c4a0182fb6",
+    "SINGLE_FILE_README.md": "3f1cc71b1b6575f393f0c27187acafbb0fa1da527fb2e2b0aa8d56a015d06567"
+  },
+  "evidence": [
+    "all-tests.txt",
+    "clean-two-file-subprocess.txt",
+    "public-read-smoke.json",
+    "fixture-valid-path-receipt.json",
+    "dependencies.txt",
+    "bundle-tests.txt",
+    "local-health.txt"
+  ]
 }

@@ -1,0 +1,2 @@
+ok    PID COMMAND
+ 142768 /workspace/.terminal-venv/bin/python3 /workspace/.terminal-venv/bin/streamlit run /workspace/trading_terminal.py --server.headless true --server.address 0.0.0.0 --server.port 8501 --browser.gatherUsageStats false

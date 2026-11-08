@@ -1,0 +1,94 @@
+{
+  "started_utc": "2026-11-08T19:25:16.596029+00:00",
+  "mode": "READ ONLY; no approvals/fills/wallet/transactions",
+  "providers": {
+    "dexscreener": {
+      "status": "READ SUCCESS",
+      "data": [
+        {
+          "mint": "So11111111111111111111111111111111111111112",
+          "pair": "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
+          "symbol": "SOL",
+          "quote_symbol": "USDC",
+          "quote_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          "venue": "orca",
+          "price_usd": 89.42,
+          "liquidity_usd": 25547258.79,
+          "volume_h1_usd": 1403573.21,
+          "url": "https://api.dexscreener.com/tokens/v1/solana/So11111111111111111111111111111111111111112",
+          "fetched_utc": "2026-11-08T19:25:16.692488+00:00",
+          "http_date": "Sun, 08 Nov 2026 19:25:16 GMT",
+          "http_age": "24",
+          "provider_observation_utc": null,
+          "field_sources": {
+            "mint": "baseToken.address",
+            "pair": "pairAddress",
+            "price_usd": "priceUsd",
+            "liquidity_usd": "liquidity.usd",
+            "volume_h1_usd": "volume.h1",
+            "venue": "dexId"
+          },
+          "price_kind": "provider indicative mark, NOT executable quote",
+          "risk": "BLIND / NO AUDIT"
+        }
+      ]
+    },
+    "solana_rpc": {
+      "status": "READ SUCCESS",
+      "data": {
+        "mint": "So11111111111111111111111111111111111111112",
+        "url": "https://api.mainnet-beta.solana.com",
+        "fetched_utc": "2026-11-08T19:25:18.353411+00:00",
+        "http_date": "Sun, 08 Nov 2026 19:25:17 GMT",
+        "http_age": null,
+        "provider_observation_utc": null,
+        "subset_verdict": "PASS SUBSET",
+        "reasons": [],
+        "scope": "CODE authority/extension subset only; NOT RISK Bot CLEAR",
+        "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "slot": 467031578,
+        "decimals": 9,
+        "mint_authority": null,
+        "freeze_authority": null,
+        "transfer_tax": false,
+        "raw_hash": "c3cad4a134456caec5e06aa28abd7eff47044c09e1da5eba26a228438dce32b1",
+        "audit_id": "bad6a3f6368f9d29cc5e70aa01f5bd06bc631cc10bb6fa71fe87ff746538d329"
+      }
+    },
+    "jupiter": {
+      "status": "READ SUCCESS",
+      "provenance": {
+        "url": "https://api.jup.ag/swap/v2/order?inputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&outputMint=So11111111111111111111111111111111111111112&amount=1000000&slippageBps=100",
+        "fetched_utc": "2026-11-08T19:25:19.921189+00:00",
+        "http_date": "Sun, 08 Nov 2026 19:25:19 GMT",
+        "http_age": null,
+        "provider_observation_utc": null
+      },
+      "input_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "output_mint": "So11111111111111111111111111111111111111112",
+      "in_amount": "1000000",
+      "out_amount": "11178073",
+      "request_id": "01a1bc9f-4f50-761a-aff0-ad54443a4c3c",
+      "route_steps": 4,
+      "no_transaction": true,
+      "no_taker": true,
+      "provenance_fresh_at_read": true
+    }
+  },
+  "actual_kill_file_present": true,
+  "local_model_preview_only": {
+    "quantity": "0.011150197",
+    "notional": "1.00000000",
+    "price": "89.684514094235285708404972575820857694263159655385",
+    "fee": "0.01300000",
+    "adverse_pct": "0.2958108859710195799653014715062152698089461590100",
+    "model": "route-adverse-25bp-fee-30bp-plus-1cent-v1",
+    "source_url": "https://api.jup.ag/swap/v2/order?inputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&outputMint=So11111111111111111111111111111111111111112&amount=1000000&slippageBps=100",
+    "quote_id": "505673ff34419b9bbd3c1e3b1866f03ae194253595d1655c5c2682160c1b414c",
+    "cost_assumption": "Route output plus adverse 25bp; additional 30bp + $0.01 estimated reserve",
+    "chain_simulation": "NOT PERFORMED \u2014 local deterministic paper simulation only",
+    "NOT_A_FILL": "No gate clearance, approval, order, position or ledger write was performed"
+  },
+  "runtime_gate_blocker": "GLOBAL KILL ACTIVE \u2014 all paper buys/sells blocked",
+  "finished_utc": "2026-11-08T19:25:19.921700+00:00"
+}

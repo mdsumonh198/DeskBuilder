@@ -1,12 +1,11 @@
 """TEST ONLY: engineered deterministic provider fixtures, NOT recorded performance.
-Every ledger and non-wallet attestation test signer lives in a TemporaryDirectory.
+Every test ledger and injected keyless gate provider lives in a TemporaryDirectory.
 Never imports/modifies the PumpGrok repository or its real halt/policy.
 """
 import sys
 import unittest
 import tempfile
 import json
-import base64
 import copy
 import sqlite3
 from pathlib import Path
@@ -16,8 +15,6 @@ from decimal import Decimal as D
 from concurrent.futures import ThreadPoolExecutor
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import trading_terminal as m
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives.serialization import Encoding,PublicFormat
 
 MINT='So11111111111111111111111111111111111111112'
 PAIR='11111111111111111111111111111111'
@@ -25,15 +22,24 @@ M2='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
 M3='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
 M4='TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'
 
+class TestOnlyGate:
+ """In-memory trusted TEST seam. Never imported or discoverable by deployed UI."""
+ def __init__(self,path,kill):self.path=path;self.kill=kill;self.expected=None
+ def read(self,now):
+  if self.kill.exists():raise m.Blocked('GLOBAL KILL ACTIVE — TEST ONLY')
+  try:
+   payload=json.loads(self.path.read_text())['payload']
+   if m.digest(payload)!=self.expected:raise m.Blocked('Untrusted TEST fixture altered')
+   return m.validate_gate_contract(payload,now)
+  except (OSError,ValueError,KeyError):raise m.Blocked('Missing TEST fixture evidence') from None
+
 class Fixture:
  def __init__(self):
   self.tmp=tempfile.TemporaryDirectory(prefix='PAPER_TEST_ONLY_');self.root=Path(self.tmp.name)
   self.now=datetime(2026,11,8,20,0,tzinfo=timezone.utc)
   self.ledger=m.PaperLedger(self.root/'TEST_ONLY.sqlite',lambda:self.now)
-  # NON-WALLET signature fixture: verifies the production attestation verifier only.
-  self.signer=Ed25519PrivateKey.generate();pub=self.signer.public_key().public_bytes(Encoding.Raw,PublicFormat.Raw).hex()
-  self.path=self.root/'TEST_ONLY_attestation.json';self.kill=self.root/'TEST_ONLY_KILL'
-  self.gates=m.DeskEvidence(str(self.path),pub,self.kill);self.broker=m.PaperBroker(self.ledger,self.gates,human_identity=lambda:'a'*64)
+  self.path=self.root/'TEST_ONLY_keyless_fixture.json';self.kill=self.root/'TEST_ONLY_KILL'
+  self.gates=TestOnlyGate(self.path,self.kill);self.broker=m.PaperBroker(self.ledger,self.gates,human_identity=lambda:'a'*64)
   self.risks={};self.serial=0
  def meta(self,url):return {'url':url,'fetched_utc':m.stamp(self.now),'http_date':format_datetime(self.now,usegmt=True),'http_age':'0','provider_observation_utc':None}
  def row(self,price='1',mint=MINT):
@@ -47,13 +53,13 @@ class Fixture:
    'parsed':{'type':'mint','info':info}}}}}
  def audit(self,mint=MINT,raw=None):
   return m.parse_authority(raw or self.raw_authority(),mint,self.meta(m.RPC))
- def sign(self,modify=None):
+ def publish_fixture(self,modify=None):
   p={'audience':'pumpgrok-standalone-paper-v3','issued_utc':m.stamp(self.now),
    'expires_utc':m.stamp(self.now+timedelta(seconds=55)),'halt':'CLEAR','authoritative':True,
    'policy':copy.deepcopy(m.POLICY),'strategy':{'version':m.RULES,'replay_passed':True,'human_promoted':True,'model':m.MODEL},
    'owner_identity_hash':'a'*64,'risk':self.risks,'evidence_id':'TEST_ONLY_RECEIPT','owner_authorization_id':'TEST_ONLY_AUTHORIZATION'}
   if modify:modify(p)
-  self.path.write_text(json.dumps({'payload':p,'signature':base64.b64encode(self.signer.sign(m.canonical(p).encode())).decode()}))
+  self.gates.expected=m.digest(p);self.path.write_text(json.dumps({'payload':p}))
   return p
  def proposal(self,side='BUY',usd='2.5',quantity='0',price='1',mint=MINT,slip='3',out=None):
   self.serial+=1;row=self.row(price,mint);audit=self.audit(mint)
@@ -70,7 +76,7 @@ class Fixture:
   q=m.RouteModel.parse(raw,self.meta(m.JUP+'?TEST_ONLY=1'),seed,audit,amount,im,om)
   t=m.build_ticket(row,audit,q,side,seed['usd'],seed['quantity'],slip,'TEST_ONLY_'+str(self.serial))
   self.risks[mint]={'pair':PAIR,'audit_id':audit['audit_id'],'verdict':'CLEAR','holders_clear':True,'social_clear':True,'all_mandatory_checks_clear':True}
-  self.sign();self.broker.propose(t,row,audit,q)
+  self.publish_fixture();self.broker.propose(t,row,audit,q)
   return t,row,audit,q,raw
  def approve(self,t):return self.broker.approve(t['decision_id'],m.digest(t),'CONFIRM PAPER '+t['decision_id'])
  def fill(self,t):
@@ -122,7 +128,7 @@ class EngineTests(unittest.TestCase):
   changed=dict(t,usd='2')
   with self.assertRaises(m.Blocked):self.f.broker.place(t['decision_id'],app['approval_id'],m.digest(changed))
  def test_expired_approval_and_quote(self):
-  t,*_=self.f.proposal();a=self.f.approve(t);self.f.now+=timedelta(seconds=31);self.f.sign()
+  t,*_=self.f.proposal();a=self.f.approve(t);self.f.now+=timedelta(seconds=31);self.f.publish_fixture()
   with self.assertRaises(m.Blocked):self.f.broker.place(t['decision_id'],a['approval_id'],m.digest(t))
  def test_no_approval_extension(self):
   t,*_=self.f.proposal();self.f.approve(t)
@@ -135,30 +141,30 @@ class EngineTests(unittest.TestCase):
  def test_decision_rebinding(self):
   t,row,a,q,_=self.f.proposal()
   with self.assertRaises(m.Blocked):self.f.broker.propose(dict(t,usd='1'),row,a,q)
- def test_global_kill_wins_even_signed_clear(self):
+ def test_global_kill_wins_even_test_clear(self):
   t,*_=self.f.proposal();app=self.f.approve(t);self.f.kill.write_text('TEST_ONLY_HALT')
   with self.assertRaisesRegex(m.Blocked,'GLOBAL KILL'):self.f.broker.place(t['decision_id'],app['approval_id'],m.digest(t))
  def test_unknown_cloud_status(self):
-  gate=m.DeskEvidence(kill_path=self.f.root/'absent')
+  gate=m.DeskEvidence(m.LocalDeskStatus(cli=str(self.f.root/'not-installed'),desk_dir=str(self.f.root)))
   with self.assertRaisesRegex(m.Blocked,'UNKNOWN'):gate.read(self.f.now)
- def test_signed_config_mismatch(self):
-  t,*_=self.f.proposal();self.f.sign(lambda p:p['policy'].update(max_trade_usd='10'))
+ def test_testprovider_config_mismatch(self):
+  t,*_=self.f.proposal();self.f.publish_fixture(lambda p:p['policy'].update(max_trade_usd='10'))
   with self.assertRaisesRegex(m.Blocked,'policy'):self.f.approve(t)
- def test_unsigned_and_tampered_attestation(self):
-  self.f.sign();j=json.loads(self.f.path.read_text());j['payload']['halt']='CLEARER';self.f.path.write_text(json.dumps(j))
+ def test_mutated_test_provider_not_trusted(self):
+  self.f.publish_fixture();j=json.loads(self.f.path.read_text());j['payload']['halt']='CLEARER';self.f.path.write_text(json.dumps(j))
   with self.assertRaises(m.Blocked):self.f.gates.read(self.f.now)
- def test_attestation_stale_future_expired_wrong_audience(self):
+ def test_contract_stale_future_expired_wrong_audience(self):
   for mutate in [lambda p:p.update(issued_utc=m.stamp(self.f.now-timedelta(seconds=31))),
                  lambda p:p.update(issued_utc=m.stamp(self.f.now+timedelta(seconds=1))),
                  lambda p:p.update(expires_utc=m.stamp(self.f.now)),lambda p:p.update(audience='other')]:
-   self.f.sign(mutate)
+   self.f.publish_fixture(mutate)
    with self.assertRaises(m.Blocked):self.f.gates.read(self.f.now)
  def test_unpromoted_strategy(self):
-  t,*_=self.f.proposal();self.f.sign(lambda p:p['strategy'].update(human_promoted=False))
+  t,*_=self.f.proposal();self.f.publish_fixture(lambda p:p['strategy'].update(human_promoted=False))
   with self.assertRaisesRegex(m.Blocked,'promoted'):self.f.approve(t)
  def test_missing_full_risk_or_holder_social(self):
   for key in ['verdict','holders_clear','social_clear','all_mandatory_checks_clear','audit_id','pair']:
-   t,*_=self.f.proposal();self.f.sign(lambda p:p['risk'][MINT].pop(key,None))
+   t,*_=self.f.proposal();self.f.publish_fixture(lambda p:p['risk'][MINT].pop(key,None))
    with self.assertRaises(m.Blocked):self.f.approve(t)
  def test_max_size_and_slippage_edges(self):
   for usd,slip in [('2.500001','3'),('0','3'),('-1','3'),('1','3.01'),('1','0'),('NaN','3'),('1','Infinity')]:
@@ -271,11 +277,11 @@ class EngineTests(unittest.TestCase):
   t,row,a,q,_=self.f.proposal();_,state=self.f.ledger.snapshot()
   for change in [{'mint':M2},{'mint_authority':PAIR},{'subset_verdict':'BLIND'}]:
    with self.assertRaises(m.Blocked):self.f.broker._checks(t,row,dict(a,**change),q,state,self.f.now)
- def test_forbidden_audit_blocks_before_fill_even_with_signed_risk(self):
+ def test_forbidden_audit_blocks_before_fill_even_with_test_risk(self):
   for field in ['mintAuthority','freezeAuthority']:
    t,row,a,q,_=self.f.proposal();raw=self.f.raw_authority();raw['result']['value']['data']['parsed']['info'][field]=PAIR
    bad=self.f.audit(raw=raw);t['decision_id']+='_'+field;t['audit_id']=bad['audit_id']
-   self.f.risks[MINT]['audit_id']=bad['audit_id'];self.f.sign();self.f.broker.propose(t,row,bad,q)
+   self.f.risks[MINT]['audit_id']=bad['audit_id'];self.f.publish_fixture();self.f.broker.propose(t,row,bad,q)
    with self.assertRaises(m.Blocked):self.f.approve(t)
 
  def test_unauthenticated_and_wrong_owner_cannot_approve(self):

@@ -1,4 +1,4 @@
-"""PumpGrok Paper System v3: standalone, read-only market + local simulated broker.
+"""PumpGrok Paper System v4: standalone, read-only market + local simulated broker.
 No wallet support, transaction construction, chain simulation, signing or broadcasting.
 No assistant Bots are connected. Default unknown/halted desk gates block all fills.
 """
@@ -172,7 +172,6 @@ def scan(store,fetch=get_json,progress=None):
 
 # ---- Paper engine: decimal event sourcing; no network order capability ----
 import os
-import base64
 import uuid
 import csv
 import io
@@ -332,42 +331,209 @@ def candidate(row):
   'findings':findings,'proposed_exit_rules':'Research only: -10% stop / +20% take-profit; never auto-sells',
   'profitability':'UNKNOWN; no profitability claim or measured win rate'}
 
-class DeskEvidence:
- """Read-only, signed short-lived gate contract. No signer or clearance writer exists here.
- A sanctioned owner-provisioned bridge must publish the evidence; currently absent.
- Public verification key is not a wallet key. No UI/config toggle can assert clearance.
+# Keyless same-host integration. This is an operational read adapter, not a gateway.
+import subprocess
+import stat as stat_module
+
+LOCAL_CLI='/workspace/pumpgrok/.venv/bin/pumpgrok'
+LOCAL_DESK='/workspace/pumpgrok'
+READ_COMMANDS={'doctor':('doctor',),'state':('state','status','--seat','chief'),
+ 'kill':('killswitch','status'),'tickets':('ticket','list'),'portfolio':('report','--daily')}
+
+def validate_gate_contract(payload,now):
+ """Defense-in-depth contract validation for a genuinely integrated future provider.
+ No production provider in this release can supply full trade clearance.
+ Test injection exists only as a Python unit-test seam, never a file/UI bypass.
  """
- def __init__(self,path=None,public_key=None,kill_path=KILL_PATH):
-  self.path=path or os.environ.get('PUMPGROK_GATE_ATTESTATION')
-  self.public_key=public_key or os.environ.get('PUMPGROK_GATE_PUBLIC_KEY')
-  self.kill_path=Path(kill_path)
- def read(self,now):
-  if self.kill_path.exists():raise Blocked('GLOBAL KILL ACTIVE — all paper buys/sells blocked')
-  if not self.path or not self.public_key:
-   raise Blocked('Desk disconnected / halt UNKNOWN / configuration UNVERIFIED; signed bridge missing')
+ if payload.get('audience')!='pumpgrok-standalone-paper-v3':raise Blocked('Wrong gate audience')
+ if not recent(payload.get('issued_utc'),now,30):raise Blocked('Stale/future authoritative desk status')
+ try:
+  expiry=datetime.fromisoformat(payload['expires_utc'])
+  if not 0<(expiry-now).total_seconds()<=60:raise Blocked('Gate expiry invalid')
+ except (KeyError,ValueError,TypeError):raise Blocked('Gate expiry invalid') from None
+ if payload.get('halt')!='CLEAR' or payload.get('authoritative') is not True:raise Blocked('Authoritative halt not CLEAR')
+ if payload.get('policy')!=POLICY:raise Blocked('Effective policy differs from owner USD limits')
+ if payload.get('strategy')!={'version':RULES,'replay_passed':True,'human_promoted':True,'model':MODEL}:
+  raise Blocked('Research rules / modeled execution not replayed and human-promoted')
+ if not re.fullmatch('[0-9a-f]{64}',str(payload.get('owner_identity_hash',''))):raise Blocked('Verified owner identity binding missing')
+ if not payload.get('evidence_id') or not payload.get('owner_authorization_id'):raise Blocked('Missing owner integration authorization / evidence receipt')
+ return payload
+
+class LocalDeskStatus:
+ """Fixed documented READ commands; no shell, imports into the engine, DB reads or
+ arbitrary tool calls. Same-host process trust is not a paper execution grant.
+ """
+ def __init__(self,cli=None,desk_dir=None,runner=None,clock=None):
+  self.cli=Path(cli or os.environ.get('PUMPGROK_CLI',LOCAL_CLI))
+  self.desk_dir=Path(desk_dir or os.environ.get('PUMPGROK_DESK_DIR',LOCAL_DESK))
+  self.runner=runner or subprocess.run;self.clock=clock or (lambda:datetime.now(timezone.utc))
+ def availability(self):
+  if not self.cli.is_absolute() or not self.desk_dir.is_absolute():return 'CLI and working directory must be absolute owner-provisioned local paths'
+  if not self.cli.is_file() or not self.desk_dir.is_dir():
+   return 'PumpGrok CLI is not installed on this Streamlit host. The box engine cannot be read from Community Cloud. Choose same-host deployment or a supported authenticated gateway (not implemented in the installed engine).'
   try:
-   from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-   path=Path(self.path)
-   if path.stat().st_size>300000:raise Blocked('Oversized desk evidence')
-   envelope=json.loads(path.read_text())
-   payload=envelope['payload']
-   Ed25519PublicKey.from_public_bytes(bytes.fromhex(self.public_key)).verify(
-    base64.b64decode(envelope['signature'],validate=True),canonical(payload).encode())
-   if payload.get('audience')!='pumpgrok-standalone-paper-v3':raise Blocked('Wrong gate audience')
-   if not recent(payload.get('issued_utc'),now,30):raise Blocked('Stale/future authoritative desk status')
-   expiry=datetime.fromisoformat(payload['expires_utc'])
-   if not 0<(expiry-now).total_seconds()<=60:raise Blocked('Gate expiry invalid')
-   if payload.get('halt')!='CLEAR' or payload.get('authoritative') is not True:
-    raise Blocked('Authoritative halt not CLEAR')
-   if payload.get('policy')!=POLICY:raise Blocked('Effective policy differs from owner USD limits')
-   if payload.get('strategy')!={'version':RULES,'replay_passed':True,'human_promoted':True,'model':MODEL}:
-    raise Blocked('Research rules / modeled execution not replayed and human-promoted')
-   if not re.fullmatch('[0-9a-f]{64}',str(payload.get('owner_identity_hash',''))):raise Blocked('Verified owner identity binding missing')
-   if not payload.get('evidence_id') or not payload.get('owner_authorization_id'):
-    raise Blocked('Missing owner integration authorization / evidence receipt')
-   return {**payload,'verification':{'signature':envelope['signature'],'public_key':self.public_key,'signed_payload_hash':digest(payload)}}
-  except Blocked:raise
-  except Exception:raise Blocked('Invalid/untrusted/missing signed desk evidence') from None
+   s=self.cli.stat()
+   if s.st_uid not in (0,os.getuid()) or s.st_mode & (stat_module.S_IWGRP|stat_module.S_IWOTH) or not os.access(self.cli,os.X_OK):
+    return 'Local CLI executable is not trusted by owner/permissions'
+  except OSError:return 'Local CLI executable metadata unavailable'
+  return None
+ def _command(self,name):
+  args=[str(self.cli),*READ_COMMANDS[name]];started=stamp(self.clock())
+  record={'command':args,'cwd':str(self.desk_dir),'started_utc':started,'source':'supported local CLI'}
+  try:
+   child_env=os.environ.copy()
+   # The engine rejects unknown PUMPGROK_* settings. Remove ONLY this app's
+   # independent UI/adapter settings; retain every engine mode, policy and safety key.
+   for key in ('PUMPGROK_CLI','PUMPGROK_DESK_DIR','PUMPGROK_TERMINAL_DB','PUMPGROK_OWNER_ISSUER','PUMPGROK_OWNER_SUBJECT'):
+    child_env.pop(key,None)
+   p=self.runner(args,cwd=str(self.desk_dir),env=child_env,text=True,capture_output=True,timeout=12,check=False)
+   if len(p.stdout)>200000 or len(p.stderr)>200000:raise Blocked('Oversized CLI output')
+   record.update(exit_code=p.returncode,finished_utc=stamp(self.clock()),stdout_hash=hashlib.sha256(p.stdout.encode()).hexdigest(),stderr_hash=hashlib.sha256(p.stderr.encode()).hexdigest())
+   if p.returncode!=0:return None,'CLI '+name+' failed (exit '+str(p.returncode)+')',record
+   return p,None,record
+  except subprocess.TimeoutExpired:return None,'CLI '+name+' timed out; no retry',dict(record,exit_code=None,finished_utc=stamp(self.clock()))
+  except (OSError,Blocked):return None,'CLI '+name+' unavailable or invalid; no fallback',dict(record,exit_code=None,finished_utc=stamp(self.clock()))
+ @staticmethod
+ def parse_halt(text,now):
+  try:
+   p=json.loads(text);meta=p['meta']
+   if not isinstance(p,dict) or meta.get('source')!='ledger' or meta.get('stale') is not False:
+    raise Blocked('Halt evidence source/staleness invalid')
+   if not recent(meta.get('fetched_at'),now) or not 0<=dec(meta.get('freshness_s'))<=60 or not meta.get('correlation_id'):
+    raise Blocked('Halt evidence timestamp/receipt missing or stale')
+   for key in ('halted','kill_switch_active','drawdown_halt','daily_loss_halt','breaker_open'):
+    if type(p[key]) is not bool:raise Blocked('Halt flags must be booleans')
+   if not isinstance(p['reasons'],list) or not all(isinstance(x,str) for x in p['reasons']):raise Blocked('Halt reasons invalid')
+   if p['effective_mode'] not in ('paper','live','research'):raise Blocked('Unknown effective mode')
+   if any(p[k] for k in ('kill_switch_active','drawdown_halt','daily_loss_halt','breaker_open')) and not p['halted']:
+    raise Blocked('Contradictory halt flags')
+   return p
+  except (KeyError,TypeError,ValueError):raise Blocked('Invalid halt/status CLI JSON') from None
+ @staticmethod
+ def parse_policy_log(text):
+  # Only recognized numeric fields, never eval, arbitrary JSON log bodies or secrets.
+  found={}
+  fields=['max_trade_fraction','max_token_fraction','daily_loss_halt_fraction','max_open_positions','paper_equity_sol','max_slippage_bps']
+  for line in text.splitlines():
+   try:message=json.loads(line).get('msg','')
+   except (ValueError,AttributeError):continue
+   if not isinstance(message,str) or not message.startswith('operator registry effective budget='):continue
+   for key in fields:
+    match=re.search(r"'"+key+r"':\s*'?([0-9.]+)'?",message)
+    if match:
+     try:found[key]=str(dec(match.group(1)))
+     except Blocked:pass
+  return found
+ @staticmethod
+ def parse_report(text):
+  found={'source':'supported CLI daily report (source window is UTC, not a Dhaka-day risk verdict)',
+   'units':'SOL','authority':'Engine ledger report; separate from standalone USD paper ledger'}
+  header=re.search(r'^Mode: (paper|research|live) \| Autonomy: ([a-z-]+) \| Ledger: ([A-Za-z0-9._-]+) seq (\d+) \| Equity: ([0-9.]+) SOL$',text,re.M)
+  if not header:return {'available':False,'reason':'Unsupported report schema; no portfolio values inferred'}
+  found.update(available=True,mode=header[1],autonomy=header[2],ledger_id=header[3],ledger_seq=int(header[4]),equity_sol=str(dec(header[5])))
+  for label,key in [('realized PnL','realized_sol'),('unrealized PnL','unrealized_sol')]:
+   match=re.search(re.escape(label)+r': (-?[0-9.]+) SOL',text)
+   if match:found[key]=str(dec(match[1]))
+  count=re.search(r'trades \(buys/sells\): (\d+) \| closed: (\d+)',text)
+  if count:found.update(trades=int(count[1]),closed=int(count[2]))
+  found['open_positions']=0 if '## Open positions\nnone open\n' in text else None
+  found['heartbeat_evidence']='NO HEARTBEATS RECORDED' if 'no heartbeat rows recorded' in text else 'NOT PARSED / NOT PROOF OF SEAT LIVENESS'
+  found['market_tick_evidence']='NO MARKET TICKS RECORDED' if 'no market ticks recorded' in text else 'NOT PARSED'
+  found['risk_evidence']='NO VERDICTS RECORDED' if 'no verdicts recorded' in text else 'NO TICKET-SCOPED CLEARANCE INTERFACE'
+  scope=re.search(r'^# PumpGrok paper report - daily - (\d{4}-\d{2}-\d{2}) \(UTC\)',text,re.M)
+  if scope:found['source_report_utc_day']=scope[1]
+  return found
+ def snapshot(self):
+  now=self.clock()
+  result={'schema':'pumpgrok-cli-read-v4','received_utc':stamp(now),'source':'supported same-host operational CLI',
+   'connection':'DISCONNECTED','effective_mode':'UNKNOWN','desk_state':'UNKNOWN','errors':[],'receipts':{},
+   'capabilities':{'state_read':False,'halt_read':False,'tickets_list':False,'portfolio_report_read':False,
+    'ticket_scoped_full_risk_read':False,'exact_approval_read':False,'authenticated_gateway':False,'can_place_orders':False},
+   'agents':{role:'NOT CONNECTED' for role in ROLES}}
+  unavailable=self.availability()
+  if unavailable:result['errors'].append(unavailable);return result
+  outputs={}
+  for name in READ_COMMANDS:
+   output,error,receipt=self._command(name);result['receipts'][name]=receipt
+   if error:result['errors'].append(error)
+   else:outputs[name]=output
+  now=self.clock();result['received_utc']=stamp(now)
+  for name in ('state','kill'):
+   if name in outputs:
+    try:
+     result[name]=self.parse_halt(outputs[name].stdout,now)
+     result['capabilities']['state_read' if name=='state' else 'halt_read']=True
+    except Blocked as e:result['errors'].append(str(e))
+  if 'doctor' in outputs:
+   report=outputs['doctor'].stdout
+   mode=re.search(r'^info\s+mode=(paper|live|research) profile=([^\s]+)',report,re.M)
+   result['doctor']={'exit_code':0,'scope':'Module availability check ONLY; not full prompt/skill/roster/grant health proof',
+    'mode':mode[1] if mode else 'UNKNOWN','gateway':'NOT IMPLEMENTED' if 'gateway (pumpgrok.gateway): not-yet-implemented' in report else 'UNVERIFIED',
+    'reports_module':'NOT IMPLEMENTED' if 'reports (pumpgrok.reports): not-yet-implemented' in report else 'UNVERIFIED',
+    'health_server':'NOT SERVED' if '/healthz (not served' in report else 'UNVERIFIED'}
+  if 'state' in outputs:
+   result['reported_policy']=self.parse_policy_log(outputs['state'].stderr)
+   result['policy_status']='UNVERIFIED — status log is not a complete policy/approval attestation'
+   if result['reported_policy'].get('paper_equity_sol')=='10':
+    result['policy_status']='MISMATCH — installed engine reports 10 SOL equity and fraction limits, not the agreed $50 / $2.50 USD policy'
+  if 'tickets' in outputs:
+   try:
+    p=json.loads(outputs['tickets'].stdout)
+    if p.get('ok') is True and isinstance(p.get('tickets'),list):
+     result['ticket_count']=len(p['tickets']);result['capabilities']['tickets_list']=True
+   except (ValueError,AttributeError):result['errors'].append('Ticket list schema unavailable')
+  if 'portfolio' in outputs:
+   try:
+    result['engine_portfolio']=self.parse_report(outputs['portfolio'].stdout)
+    result['capabilities']['portfolio_report_read']=result['engine_portfolio'].get('available',False)
+   except Blocked:result['errors'].append('Portfolio report numeric schema invalid')
+  if result['capabilities']['state_read'] and result['capabilities']['halt_read']:
+   a=result['state'];b=result['kill'];doctor_mode=result.get('doctor',{}).get('mode')
+   if any(a[k]!=b[k] for k in ('halted','kill_switch_active','effective_mode')) or doctor_mode!=a['effective_mode']:
+    result['errors'].append('Conflicting doctor/status/kill evidence; do not infer desk state')
+   else:
+    result['connection']='CONNECTED READ-ONLY';result['effective_mode']=a['effective_mode']
+    result['desk_state']='HALTED' if a['halted'] else 'STATUS NOT HALTED — NOT TRADE CLEARANCE'
+  modes=[result.get('doctor',{}).get('mode'),result.get('state',{}).get('effective_mode'),result.get('engine_portfolio',{}).get('mode')]
+  if 'live' in modes:
+   result['desk_state']='UNSAFE MODE — STOP';result['errors'].append('Effective live mode reported; no trading or market monitor activation permitted')
+  result['fill_blockers']=['Installed CLI exposes status, kill, ticket listing and portfolio report, not full scoped risk/approval gateway',
+   'No genuine paper-execution integration is authorized by this read adapter',
+   'All ten assistants have no verified live connection; roster names are not liveness']
+  if result.get('state',{}).get('halted'):result['fill_blockers'].insert(0,'Authoritative desk halt is active')
+  if result.get('policy_status'):result['fill_blockers'].append(result['policy_status'])
+  return result
+
+class DeskEvidence:
+ """Production paper gate uses only supported local operational reads.
+ No custom signer, signature file, binding key or unsigned CLEAR import exists.
+ Current CLI cannot prove full ticket risk/exact approval; never infer clearance.
+ """
+ def __init__(self,status=None):self.status=status or LocalDeskStatus()
+ def read(self,now):
+  snapshot=self.status.snapshot()
+  if snapshot['desk_state']=='UNSAFE MODE — STOP':raise Blocked('UNSAFE MODE — paper flow paused')
+  if snapshot['connection']!='CONNECTED READ-ONLY':raise Blocked('Desk disconnected / halt UNKNOWN: '+('; '.join(snapshot['errors'])[:350]))
+  if snapshot['state']['kill_switch_active']:raise Blocked('GLOBAL KILL ACTIVE — authoritative CLI blocks all paper buys/sells')
+  if snapshot['state']['halted']:raise Blocked('Authoritative desk halt active')
+  raise Blocked('Desk status is connected read-only, but installed gateway/full ticket RISK and exact approval interface is unavailable. Status is not trade clearance.')
+
+def start_market_monitor(session):
+ session['monitor_running']=True;session.setdefault('monitor_successful_cycles',0);session.setdefault('monitor_attempted_cycles',0)
+def stop_market_monitor(session):session['monitor_running']=False
+
+def monitor_tick(store,session,fetch=get_json,desk_snapshot=None):
+ """User-open UI tick only. Never schedules, approves, places or changes desk state."""
+ if not session.get('monitor_running',False):return {'state':'STOPPED','message':'Market monitor is stopped. No source read was requested.'}
+ if desk_snapshot and desk_snapshot.get('desk_state')=='UNSAFE MODE — STOP':
+  stop_market_monitor(session);return {'state':'STOPPED','message':'Unsafe engine mode reported; monitor paused.'}
+ result=scan(store,fetch=fetch)
+ if not result.get('cached'):
+  session['monitor_attempted_cycles']=session.get('monitor_attempted_cycles',0)+1
+  if store.get('health',{}).get('status')=='OK':session['monitor_successful_cycles']=session.get('monitor_successful_cycles',0)+1
+ session['monitor_last_result']=result
+ return {'state':'MONITORING','result':result,'successful_cycles':session.get('monitor_successful_cycles',0),
+  'attempted_cycles':session.get('monitor_attempted_cycles',0),'market_health':store.get('health',{}),'pair_count':len(store.rows())}
 
 class RouteModel:
  """Quote -> deterministic PAPER simulation. No executable transaction or chain simulation.
@@ -657,7 +823,7 @@ class PaperBroker:
   elif dec(ticket['quantity'])<=0 or dec(ticket['usd'])!=0:raise Blocked('Invalid exact SELL quantity')
  def _checks(self,t,row,a,q,state,now):
   self.validate_ticket(t)
-  gate=self.gates.read(now) # Re-read inside every approval and placement transaction.
+  gate=validate_gate_contract(self.gates.read(now),now) # Re-read and validate every exact approval/placement.
   if a.get('mint')!=t['mint'] or a.get('audit_id')!=t['audit_id']:
    raise Blocked('Authority audit identity/version mismatch')
   if a.get('audit_id')!=digest({k:v for k,v in a.items() if k!='audit_id'}):raise Blocked('Audit hash mismatch')
@@ -777,7 +943,7 @@ def run_ui():
  import pandas as pd
  import plotly.graph_objects as go
  from html import escape
- st.set_page_config(page_title='PumpGrok | Paper System v3',page_icon='◈',layout='wide')
+ st.set_page_config(page_title='PumpGrok | Desk Monitor v4',page_icon='◈',layout='wide')
  base=Path(__file__).parent
  db=Path(os.environ.get('PUMPGROK_TERMINAL_DB',str(base/'terminal_data/terminal.sqlite3')))
  research=ResearchStore(db)
@@ -800,7 +966,14 @@ def run_ui():
     if float(st.user.get('nbf',0))>now:return None
     return digest({'issuer':iss,'subject':sub})
    except (AttributeError,TypeError,ValueError):return None
-  broker=PaperBroker(ledger,human_identity=owner_identity);events,state=ledger.snapshot();v=ledger.portfolio()
+  status_adapter=LocalDeskStatus(clock=ledger.clock)
+  broker=PaperBroker(ledger,gates=DeskEvidence(status_adapter),human_identity=owner_identity)
+  def desk_snapshot(force=False):
+   saved=research.get('desk_status_v4')
+   if force or not saved or not recent(saved.get('received_utc'),ledger.clock(),30):
+    saved=status_adapter.snapshot();research.set('desk_status_v4',saved)
+   return saved
+  desk=desk_snapshot();events,state=ledger.snapshot();v=ledger.portfolio()
  except (Blocked,sqlite3.Error,OSError) as e:
   st.error('LEDGER INTEGRITY / STORAGE FAILURE — ALL ACTIONS STOPPED: '+str(e));st.stop()
  def english(x):
@@ -835,13 +1008,56 @@ def run_ui():
  @media(max-width:760px){.block-container{padding:1.6rem .8rem}.header{align-items:flex-start;flex-direction:column;gap:12px}.brand{font-size:21px}.chips{justify-content:flex-start}.state{padding:15px}.state h2{font-size:20px}.safety{flex-direction:column;gap:6px}[data-testid="stMetricValue"]{font-size:22px}.version{font-size:10px}}
  </style>''',unsafe_allow_html=True)
  
- html('<div class="header"><div><div class="brand"><span class="brand-icon">◈</span><b>PumpGrok</b> Paper System</div><div class="version">Paper System v3 • English / Dark • Single File</div></div><div class="chips"><span class="chip cyan">REAL MARKET READS</span><span class="chip">SIMULATED ORDERS ONLY</span><span class="chip amber">MANUAL APPROVAL</span></div></div>')
- bridge=None
- try:
-  bridge=broker.gates.read(ledger.clock());gate_status='VERIFIED PAPER GATES / '+bridge['evidence_id']
- except Blocked as e:gate_status=str(e)
+ html('<div class="header"><div><div class="brand"><span class="brand-icon">◈</span><b>PumpGrok</b> Paper System</div><div class="version">Desk Status Adapter v4 • Read-only Monitor • English / Dark • Single File</div></div><div class="chips"><span class="chip cyan">REAL MARKET READS</span><span class="chip">SIMULATED ORDERS ONLY</span><span class="chip amber">MANUAL APPROVAL</span></div></div>')
+ gate_status=desk['connection']+' / '+desk['desk_state']+' / '+desk.get('policy_status','Policy UNVERIFIED')
  st.warning(gate_status)
- st.caption('No wallets, real orders, autonomous schedules or connected assistant Bots. Local paper engine code is implemented; external clearance is never inferred from a missing halt file.')
+ try:desk_time=datetime.fromisoformat(desk['received_utc']).astimezone(TZ).strftime('%d %b %H:%M:%S Asia/Dhaka (UTC+6)')
+ except (ValueError,KeyError,TypeError):desk_time='UNKNOWN'
+ st.caption('Desk snapshot read: '+desk_time+' — snapshot age at render '+str(round(age(desk.get('received_utc')),1))+'s. This is not a continuous Bot heartbeat.')
+ st.caption('Keyless operational integration: supported local CLI status, kill, tickets and portfolio report. READ-ONLY is not permission to trade. No wallet, signer, autonomous orders or connected assistant Bots.')
+ if desk.get('engine_portfolio',{}).get('available'):
+  ep=desk['engine_portfolio']
+  html('<div class="health"><div class="health-title">INSTALLED ENGINE LEDGER · '+escape(ep['equity_sol'])+' SOL · '+str(ep.get('trades','UNKNOWN'))+' TRADES · '+str(ep.get('open_positions','UNKNOWN'))+' OPEN POSITIONS</div><div class="health-time">Separate source: CLI daily report. The standalone $50 USD paper account below is NOT connected to these engine balances.</div></div>')
+ start_col,stop_col,refresh_col=st.columns([2,2,2])
+ with start_col:
+  if st.button('Start Market Monitor',type='primary',disabled=st.session_state.get('monitor_running',False) or desk['desk_state']=='UNSAFE MODE — STOP'):
+   start_market_monitor(st.session_state);st.rerun()
+ with stop_col:
+  if st.button('Stop Market Monitor',disabled=not st.session_state.get('monitor_running',False)):
+   stop_market_monitor(st.session_state);st.rerun()
+ with refresh_col:
+  if st.button('Refresh Desk Status — Read Only'):
+   desk_snapshot(True);st.rerun()
+ @st.fragment(run_every=30 if st.session_state.get('monitor_running',False) else None)
+ def market_monitor_panel():
+  current_desk=desk_snapshot()
+  if st.session_state.get('monitor_running',False):
+   outcome=monitor_tick(research,st.session_state,fetch=lambda path:ui_fetch(API+path),desk_snapshot=current_desk)
+  else:outcome={'state':'STOPPED','message':'Press Start Market Monitor to read real markets every 30 seconds while this UI session is active.'}
+  h=research.get('health',{});last=research.get('last_success')
+  st.markdown('### '+('READ-ONLY MARKET MONITOR — RUNNING' if st.session_state.get('monitor_running') else 'READ-ONLY MARKET MONITOR — STOPPED'))
+  st.caption('No trading loop. No Bot orchestration. Timer runs only in an active Streamlit session; Stop disables further monitor requests. Shared 30-second cooldown; counters reflect actual reads in this UI session.')
+  m=st.columns(4)
+  m[0].metric('Successful Real-Read Cycles',st.session_state.get('monitor_successful_cycles',0))
+  m[1].metric('Monitor Attempts',st.session_state.get('monitor_attempted_cycles',0))
+  m[2].metric('Observed Pairs',len(research.rows()))
+  m[3].metric('Committed Local Paper Trades',len(ledger.snapshot()[1]['fills']))
+  st.write('Source health: '+h.get('status','NOT FETCHED')+' · Desk: '+current_desk['connection']+' / '+current_desk['desk_state'])
+  if last:
+   try:shown=datetime.fromisoformat(last).astimezone(TZ).strftime('%d %b %H:%M:%S Asia/Dhaka (UTC+6)')
+   except (ValueError,TypeError):shown='UNKNOWN'
+   st.caption('Last real market retrieval: '+shown+' · retrieval age '+str(round(age(last),1))+'s. Market event time is UNKNOWN.')
+  if outcome.get('result'):st.info(outcome['result']['message'])
+  elif outcome.get('message'):st.caption(outcome['message'])
+  if h.get('error'):st.error(h['error'])
+  live_rows=research.rows()
+  if live_rows:
+   table([{'Symbol':english(r['symbol']),'Indicative USD':r['price_usd'],'Liquidity USD':r['liquidity_usd'],
+    'Mint':r['mint'],'Retrieved Age s':round(age(r['fetched_utc']),1),'Source':r['url']} for r in live_rows[:8]])
+  actual=research.events()[:5]
+  if actual:table([{'Code stage':e['stage'],'Actual action / result':english(e['message']),
+   'Time Asia/Dhaka':datetime.fromisoformat(e['utc']).astimezone(TZ).strftime('%H:%M:%S UTC+6')} for e in actual])
+ market_monitor_panel()
  metrics=st.columns(6)
  for col,label,val in zip(metrics,['Paper Cash','Net Equity (indicative MTM)','Realized P&L','Unrealized P&L','Modeled Fees Paid','Open Positions'],
   [amount(v['cash']),amount(v['net_equity']),amount(v['realized']),amount(v['unrealized']),amount(v['fees']),str(len(v['positions']))]):col.metric(label,val)
@@ -853,11 +1069,11 @@ def run_ui():
   st.caption('Role mapping describes intended responsibilities. Code stages are not messages or work from these Bots.')
   st.metric('Observed Pairs',len(research.rows()))
   st.metric('Confirmed Rugs Blocked',0,help='Unknown evidence is BLIND, never proof of a rug. No full RISK integration exists.')
-  st.caption('Asia/Dhaka (UTC+6) daily boundaries; evidence timestamps stored in UTC. No background trading.')
+  st.caption('Asia/Dhaka (UTC+6) display. Engine SOL report and local modeled USD ledger are separate. No assistant heartbeat connection has been verified.')
  with body:
   overview,scanner,positions,tickets,logs,safety=st.tabs(['Overview','Scanner','Positions','Paper Tickets / Approvals','Ledger / Activity','Safety / Config'])
   with overview:
-   html('<div class="state"><div class="eyebrow">CURRENT CODE STATE / NO BACKGROUND WORK</div><h2>Manual research → quote → exact approval → paper fill</h2><p>Scanner reads real markets. Authority audit reads finalized RPC data. Quote reads an informational route. The local broker simulates adverse execution only after every verified desk gate passes.</p><div class="next">Next: scan a real pair, inspect evidence and the exact lock reasons. No paper fill can bypass the global halt, unknown desk status, unpromoted rules or missing full RISK clearance.</div></div>')
+   html('<div class="state"><div class="eyebrow">CURRENT CODE STATE / NO BACKGROUND TRADING</div><h2>Manual research → quote → exact approval → paper fill</h2><p>Scanner reads real markets. Authority audit reads finalized RPC data. Quote reads an informational route. The local broker contains a tested modeled paper branch. The installed CLI currently exposes read-only status/report, not a full trading gateway; its halt and policy mismatch still block fills.</p><div class="next">Next: scan a real pair, inspect evidence and the exact lock reasons. No paper fill can bypass the global halt, unknown desk status, unpromoted rules or missing full RISK clearance.</div></div>')
    table([{'Daily P&L':amount(v['daily_pnl']),'Daily baseline':amount(v['baseline']),'Peak-to-current drawdown':amount(v['drawdown_usd']),
     'Drawdown %':v['drawdown_pct'],'Daily entry halt latched':v['daily_halted'],'Equity marks fresh':v['fresh']}])
    curve=[{'utc':events[0]['utc'],'equity':50.0}]+[{'utc':e['utc'],'equity':float(e['payload']['net_equity'])} for e in events if e['kind']=='equity' and e['payload'].get('fresh') and e['payload'].get('net_equity') is not None]
@@ -867,7 +1083,7 @@ def run_ui():
    st.caption('Only committed fresh-mark valuations appear. Initial $50 is capital, not profit. Indicative MTM is not liquidation equity; estimated remaining exit-cost reserve: '+amount(v['estimated_exit_cost_reserve']))
    st.info('No automatic profit claims. Entry thresholds and proposed stop/take-profit are unproven research rules. Replay and owner promotion are required before any paper ticket can be approved.')
   with scanner:
-   st.subheader('Real Market Scanner')
+   st.subheader('Real Market Scanner — Manual Cycle')
    stage=st.empty()
    if st.button('Run Scanner Cycle',type='primary'):
     def progress(s,m):stage.info(s+' — '+m)
@@ -991,22 +1207,31 @@ def run_ui():
     with c2:st.download_button(label+' JSONL',ledger.export(kind),file_name=(kind or 'events')+'.jsonl',mime='application/x-ndjson',key='jsonl:'+str(kind))
    st.download_button('Drawdown / Portfolio Summary JSON',canonical(v),file_name='portfolio-summary.json',mime='application/json')
   with safety:
-   st.json(POLICY);st.write('Gate state: '+gate_status)
-   st.json({'Actual global kill':'ACTIVE' if KILL_PATH.exists() else 'ABSENT / NOT PROOF OF CLEARANCE',
-    'Authoritative desk status':'VERIFIED SHORT-LIVED SIGNATURE' if bridge else 'UNKNOWN / NOT CONNECTED',
-    'Effective policy':'VERIFIED AGAINST OWNER LIMITS' if bridge else 'UNVERIFIED / REPORTED LEGACY MISMATCH NOT RESOLVED',
-    'Rules and model promotion':'VERIFIED RECEIPT' if bridge else 'NOT VERIFIED / RESEARCH ONLY',
-    'Full RISK Bot verdict':'Per-ticket signed evidence required; code audit alone is never CLEAR',
-    'Owner approval session':'VERIFIED' if owner_identity() else 'UNAUTHENTICATED / NOT CONFIGURED',
-    'Assistant integrations':'ALL 10 NOT CONNECTED','Order implementation':'LOCAL MODELED PAPER BROKER; NO LIVE ORDER ENDPOINTS'})
-   st.write('Persistence path: '+str(db));st.write('Ledger hash-chain and replay: VERIFIED at this request')
-   st.warning('Streamlit Cloud local disk is ephemeral. Configure PUMPGROK_TERMINAL_DB to a durable mounted volume on a suitable host, and export/back up the ledger. No hosted database integration is configured. Losing the file loses approvals, loss latches and history; never describe Cloud local storage as durable production custody.')
-   st.write('Activation prerequisites: owner-authorized sanctioned desk bridge; actual halt CLEAR through owner procedure; effective policy agreement; fresh signed full RISK clearance for this mint/audit/pair; recorded replay and human rule/model promotion; fresh real market/RPC/route evidence; exact manual approval. This app does not clear the halt or write desk policy.')
-   st.caption('Signed bridge interface is implemented, but no upstream bridge is installed. Public verification key + fresh signed attestation are provisioned only after owner approval. A missing file or a user-supplied unsigned JSON is never clearance. All 10 actual assistants remain disconnected.')
+   st.subheader('Actual Desk Integration — Read Only')
+   st.write('Current state: '+gate_status)
+   st.json({'Source':'Supported installed CLI subprocess, no shell / no direct engine database reads',
+    'Connection':desk['connection'],'Effective mode':desk['effective_mode'],'Desk halt':desk['desk_state'],
+    'Policy':desk.get('policy_status','UNVERIFIED'),'Owner approval session':'VERIFIED' if owner_identity() else 'UNAUTHENTICATED / NOT CONFIGURED',
+    'Full risk/approval gateway':'NOT AVAILABLE through installed supported CLI','Assistant integrations':'ALL 10 NOT CONNECTED'})
+   if desk.get('errors'):
+    for error in desk['errors']:st.error(error)
+   if desk.get('doctor'):st.json(desk['doctor'])
+   st.subheader('Installed Engine Portfolio — SOL, Separate Ledger')
+   if desk.get('engine_portfolio'):st.json(desk['engine_portfolio'])
+   else:st.caption('Engine portfolio report unavailable; no balance has been inferred.')
+   if desk.get('reported_policy'):st.json({'Reported installed policy log fields (not full clearance)':desk['reported_policy']})
+   with st.expander('Exact Operational Read Receipts / Capabilities'):
+    st.json(desk.get('receipts',{}));st.json(desk['capabilities'])
+   st.subheader('Standalone Modeled USD Paper Ledger')
+   st.json(POLICY);st.write('Persistence path: '+str(db));st.write('Local event hash-chain and replay: VERIFIED at this request')
+   st.warning('The engine reports its own SOL ledger; the $50 USD ledger above is separate and has not been connected to engine execution. They are not added or converted. Streamlit Cloud disk may disappear; durable storage/recovery is required before any activated paper deployment.')
+   st.write('Same-host deployment: run this app where the supported PumpGrok CLI is installed. Optional absolute PUMPGROK_CLI and PUMPGROK_DESK_DIR select an owner-provisioned local installation. Cloud cannot execute the CLI on this box. The installed authenticated gateway is not implemented; this app does not expose a tunnel or backend API.')
+   st.write('Still blocked: actual halt, incompatible/unverified effective USD policy, full ticket-scoped RISK and exact owner approval integration, recorded strategy replay/promotion, and owner authentication. This read-only adapter cannot mint approvals, clear a halt, change policy, connect Bots or place engine orders.')
+   st.caption('No custom signing bridge exists or is needed for paper mode. v3 signature-file configuration has been removed. Paper rows are keyless. Runtime status does not become a RISK verdict or an approval.')
    st.caption('Route model: genuine Jupiter informational quote without taker, adverse 25bp buffer, extra modeled 30bp + $0.01 cost reserve. No on-chain transaction simulation. USDC/USD deviation over 0.5%, missing fees, route, liquidity, stale evidence or unsafe authorities reject the order.')
    st.caption('Daily loss: net equity versus prior recorded fresh daily close, with conservative $50 minimum baseline; $2.50 loss latches new entries for that Asia/Dhaka day. No reset button. Marks are manually sampled, not guaranteed midnight prices; no continuous risk monitor is running. Exits require all global and risk gates even during a daily entry halt.')
    st.link_button('DexScreener docs',DOCS);st.link_button('Solana RPC docs','https://solana.com/docs/rpc/http/getaccountinfo')
    st.link_button('Jupiter quote-only docs','https://dev.jup.ag/api-reference/swap/v2/order')
- html('<div class="foot">PAPER SYSTEM V3 / ENGLISH / DARK / SINGLE FILE · REAL READS / MODELED PAPER EXECUTION<br>No guaranteed profit. No real money. No connected assistant Bots. No unattended trading.</div>')
+ html('<div class="foot">DESK STATUS ADAPTER V4 / READ-ONLY MONITOR / ENGLISH / DARK / SINGLE FILE · REAL READS / MODELED PAPER EXECUTION<br>No guaranteed profit. No real money. No connected assistant Bots. No unattended trading.</div>')
 
 if __name__=='__main__':run_ui()

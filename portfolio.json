@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/workspace/pumpgrok/.venv/bin/pumpgrok",
+    "report",
+    "--daily"
+  ],
+  "cwd": "/workspace/pumpgrok",
+  "started_utc": "2026-11-08T19:38:15.005600+00:00",
+  "finished_utc": "2026-11-08T19:38:15.457778+00:00",
+  "exit_code": 0,
+  "stdout": "# PumpGrok paper report - daily - 2026-11-08 (UTC)\nMode: paper | Autonomy: autonomous-paper | Ledger: 01M6Y5CFMM9GZ05Q914M5Q55G1.1 seq 3 | Equity: 10.000000000 SOL\n\n## Summary\ntrades (buys/sells): 0 | closed: 0 | win rate: n/a\nrealized PnL: 0.000000000 SOL | unrealized PnL: 0.000000000 SOL\nfees: venue 0.000000000 SOL + network 0.000000000 SOL\nequity start: 10.000000000 SOL | equity end: 10.000000000 SOL (+0.00 since start)\nmax drawdown: 0.00 % | daily loss: 0.00 % (halt at 5.00 %)\n\n## Trades\nnone closed in this window\n\n## Open positions\nnone open\n\n## Rejected signals\nnone\n\n## Safety outcomes\nno verdicts recorded\n\n## Risk events\n- KillSwitchSet 2026-11-08T18:05:31.156364+00:00 01M6Y5CFMM9GZ05Q914M5Q55G1.1\n\n## Bot health\nno heartbeat rows recorded\n\n## Data freshness\nno market ticks recorded\n\n## Live gate\ndaily report: see the weekly report for gate status\n\n## Unverified\nnone: every figure derives from curve prices\n",
+  "stderr": ""
+}

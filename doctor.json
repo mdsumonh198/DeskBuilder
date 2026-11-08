@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/workspace/pumpgrok/.venv/bin/pumpgrok",
+    "doctor"
+  ],
+  "cwd": "/workspace/pumpgrok",
+  "started_utc": "2026-11-08T19:38:03.699591+00:00",
+  "finished_utc": "2026-11-08T19:38:04.167795+00:00",
+  "exit_code": 0,
+  "stdout": "info  mode=paper profile=paper\nok    settings (pumpgrok.config.settings)\nok    core (pumpgrok.core)\nok    ledger (pumpgrok.ledger)\nok    replay (pumpgrok.replay)\nok    logging (pumpgrok.logging)\nok    execution.live (pumpgrok.execution.live)\nok    engine (pumpgrok.engine)\nok    tools (pumpgrok.tools)\nwarn  gateway (pumpgrok.gateway): not-yet-implemented\nok    supervisor (pumpgrok.supervisor)\nwarn  reports (pumpgrok.reports): not-yet-implemented\nwarn  /healthz (not served: health.port=0, only `run --serve` binds a port)\nwarn  /metrics (not served: health.port=0, only `run --serve` binds a port)\ndoctor: 9 present, 2 not-yet-implemented (warnings), exit 0\n",
+  "stderr": ""
+}

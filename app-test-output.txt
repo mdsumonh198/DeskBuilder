@@ -1,0 +1,2 @@
+2026-11-09 01:01:01.125 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+PASS AppTest idle/locked, cached real-data path, exact-mint draft, duplicate draft idempotency, no fills/cash changes.

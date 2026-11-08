@@ -1,0 +1,19 @@
+{
+  "component": "standalone real public market scanner / research drafts",
+  "paper_execution": "NOT IMPLEMENTED; unconditionally locked",
+  "source": "DexScreener official public API",
+  "validated_real_pairs_smoke": 7,
+  "onchain_audit": "BLIND / not implemented",
+  "desk_integration": "NOT CONNECTED",
+  "safety": "No real desk source/config/keys changed; global halt untouched; no orders or approvals",
+  "tests": [
+    "compile",
+    "4 offline core tests",
+    "Streamlit AppTest idle, cached scan, duplicate draft with no fills"
+  ],
+  "browser_verified": false,
+  "ui_version": "Market Scanner v2 \u2022 English / Dark",
+  "presentation_tests": "English-only rendered controls/logs/tables/JSON and empty/data/error states passed; originals retained",
+  "theme": "Deep navy with emerald/cyan; explicit dark Plotly/cell styling; packaged native dark config",
+  "style_update_made_no_provider_probe": true
+}

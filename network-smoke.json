@@ -1,0 +1,56 @@
+{
+  "result": {
+    "cached": false,
+    "new": 7,
+    "message": "7 real pairs observed; no orders; missing evidence blocks all fills"
+  },
+  "health": {
+    "status": "OK",
+    "utc": "2026-11-08T18:51:09.598645+00:00",
+    "pairs": 7,
+    "mints": [
+      "FU4JmFnSsFcTjALsfe8Byod3xaZQYAEurqMBefW2pump",
+      "FDfFpvV5JoJwYdXkasP7bJcGb5vbw5AEtfo63Pabpump",
+      "7kagiutSA5A7FwEMx57GbLdU9YRS9pJyevABTc3ppump",
+      "HdBqANzXMhfAWWtkJjiLmg6VyQLLRRfVnDvBeFRWpump",
+      "8SCtD3kgeLSdboe32j1AZEzsudsqBzCrW4E5d7a5pump",
+      "9EPtsKZAomGxr3YR2cxfedLSjHCTvWcbv472dkNfLoat",
+      "875W95cC2otw3FSFufpJ4qJ3wBygcbfuSd6VCBKspump",
+      "HnSR13bj31J9T2RGVfrpZpGsF8vo4usMp3B9YiknZFLU"
+    ],
+    "source": {
+      "url": "https://api.dexscreener.com/tokens/v1/solana/FU4JmFnSsFcTjALsfe8Byod3xaZQYAEurqMBefW2pump,FDfFpvV5JoJwYdXkasP7bJcGb5vbw5AEtfo63Pabpump,7kagiutSA5A7FwEMx57GbLdU9YRS9pJyevABTc3ppump,HdBqANzXMhfAWWtkJjiLmg6VyQLLRRfVnDvBeFRWpump,8SCtD3kgeLSdboe32j1AZEzsudsqBzCrW4E5d7a5pump,9EPtsKZAomGxr3YR2cxfedLSjHCTvWcbv472dkNfLoat,875W95cC2otw3FSFufpJ4qJ3wBygcbfuSd6VCBKspump,HnSR13bj31J9T2RGVfrpZpGsF8vo4usMp3B9YiknZFLU",
+      "fetched_utc": "2026-11-08T18:51:09.593727+00:00",
+      "http_date": "Sun, 08 Nov 2026 18:51:09 GMT",
+      "http_age": "13",
+      "provider_observation_utc": null
+    },
+    "error": null
+  },
+  "example": {
+    "mint": "875W95cC2otw3FSFufpJ4qJ3wBygcbfuSd6VCBKspump",
+    "pair": "2u2muWuNskroUiqFkpxR9LFkLS1egyVCnpoWz7bM4aVt",
+    "symbol": "Forever",
+    "quote_symbol": "SOL",
+    "quote_mint": "So11111111111111111111111111111111111111112",
+    "venue": "pumpfun",
+    "price_usd": 8.236e-06,
+    "liquidity_usd": null,
+    "volume_h1_usd": 61825.89,
+    "url": "https://api.dexscreener.com/tokens/v1/solana/FU4JmFnSsFcTjALsfe8Byod3xaZQYAEurqMBefW2pump,FDfFpvV5JoJwYdXkasP7bJcGb5vbw5AEtfo63Pabpump,7kagiutSA5A7FwEMx57GbLdU9YRS9pJyevABTc3ppump,HdBqANzXMhfAWWtkJjiLmg6VyQLLRRfVnDvBeFRWpump,8SCtD3kgeLSdboe32j1AZEzsudsqBzCrW4E5d7a5pump,9EPtsKZAomGxr3YR2cxfedLSjHCTvWcbv472dkNfLoat,875W95cC2otw3FSFufpJ4qJ3wBygcbfuSd6VCBKspump,HnSR13bj31J9T2RGVfrpZpGsF8vo4usMp3B9YiknZFLU",
+    "fetched_utc": "2026-11-08T18:51:09.593727+00:00",
+    "http_date": "Sun, 08 Nov 2026 18:51:09 GMT",
+    "http_age": "13",
+    "provider_observation_utc": null,
+    "field_sources": {
+      "mint": "baseToken.address",
+      "pair": "pairAddress",
+      "price_usd": "priceUsd",
+      "liquidity_usd": "liquidity.usd",
+      "volume_h1_usd": "volume.h1",
+      "venue": "dexId"
+    },
+    "price_kind": "provider indicative mark, NOT executable quote",
+    "risk": "BLIND / NO AUDIT"
+  }
+}

@@ -1,226 +1,150 @@
-"""PumpGrok — isolated, synthetic paper terminal. No desk or network integrations."""
+"""English dark real-market research terminal. Execution remains fail-closed."""
+from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import random
+from html import escape
+import os
+import re
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from market_paper_terminal.core import Store,scan,age,audit,gate,halt_status,ROLES,FRESH_SECONDS,DOCS
 
-st.set_page_config(page_title='PumpGrok • Paper Terminal', page_icon='◈', layout='wide')
-TZ = ZoneInfo('Asia/Dhaka')
-ROLES = {'CHIEF': 'Cycle orchestrator', 'SCOUT': 'Pair discovery', 'RISK': 'Safety gate',
-         'WHALE': 'Holder analysis', 'SNIPER': 'Synthetic fills', 'RUG': 'Threat detection',
-         'EXIT': 'Synthetic close', 'SHILL': 'Narrative context', 'SIGNAL': 'Momentum score', 'JOURNAL': 'Paper ledger'}
-INITIAL = 10000.0
-
-def now():
-    return datetime.now(TZ)
-
-def event(state, agent, text, stamp):
-    state['activity'].append({'Time (UTC+6)': stamp.strftime('%H:%M:%S'), 'Agent': agent, 'Simulated activity': text})
-
-def cycle(state):
-    """A deterministic per-cycle synthetic scan with two blocks and two round trips."""
-    state['cycle'] += 1
-    n = state['cycle']
-    rng = random.Random(7300 + n)
-    stamp = now()
-    event(state, 'CHIEF', f'DEMO cycle {n:03d} opened • isolated simulation', stamp)
-    rows = []
-    for i in range(6):
-        symbol = f'DEMO-{n:03d}-{i+1:02d}'
-        blocked = i in (1, 4)
-        filled = i in (0, 3)
-        price = round(rng.uniform(.015, .95), 6)
-        score = rng.randint(68, 96) if not blocked else rng.randint(12, 39)
-        reason = ('Synthetic concentration flag' if i == 1 else 'Synthetic liquidity flag') if blocked else ('Round trip closed' if filled else 'Below entry threshold')
-        rows.append({'Cycle': n, 'Demo pair': symbol, 'Synthetic price ($)': price,
-                     'Score': score, 'Decision': 'BLOCKED' if blocked else ('PAPER FILLED' if filled else 'WATCH'),
-                     'Reason': reason, 'Time (UTC+6)': stamp.strftime('%H:%M:%S')})
-        event(state, 'SCOUT', f'{symbol} discovered at synthetic ${price:.6f}', stamp)
-        event(state, 'RISK', f'{symbol}: {"BLOCK" if blocked else "DEMO CLEAR"}', stamp)
-        if blocked:
-            state['blocked'] += 1
-            event(state, 'RUG', f'{symbol}: hypothetical threat blocked before entry', stamp)
-            continue
-        event(state, 'WHALE', f'{symbol}: simulated holder check complete', stamp)
-        event(state, 'SHILL', f'{symbol}: synthetic narrative reviewed; no social data', stamp)
-        event(state, 'SIGNAL', f'{symbol}: demo score {score}/100', stamp)
-        if not filled:
-            continue
-        allocation = round(min(500.0, state['balance'] * .05), 2)
-        # Net return includes illustrative 0.2% round-trip fees; never a real quote.
-        gross_return = rng.uniform(-.035, .065)
-        fee = round(allocation * .002, 2)
-        pnl = round(allocation * gross_return - fee, 2)
-        exit_price = round(price * (1 + gross_return), 8)
-        state['balance'] = round(state['balance'] + pnl, 2)
-        state['trades'].append({'ID': f'P-{n:03d}-{i+1:02d}', 'Demo pair': symbol,
-            'Entry ($)': price, 'Exit ($)': exit_price, 'Notional ($)': allocation,
-            'Fees ($)': fee, 'Net P&L ($)': pnl, 'Status': 'PAPER CLOSED',
-            'Time (UTC+6)': stamp.strftime('%H:%M:%S')})
-        event(state, 'SNIPER', f'{symbol}: simulated ${allocation:,.2f} entry', stamp)
-        event(state, 'EXIT', f'{symbol}: simulated close • net ${pnl:+.2f}', stamp)
-        event(state, 'JOURNAL', f'{symbol}: closed round trip recorded, fees ${fee:.2f}', stamp)
-    state['scanned'] += len(rows)
-    state['scanner'].extend(rows)
-    # A strict sequence axis avoids overlapping timestamps on rapid button clicks.
-    state['equity'].append({'Cycle': n, 'Equity ($)': state['balance'], 'Time': stamp.isoformat()})
-    event(state, 'CHIEF', f'Cycle {n:03d} complete • 6 scanned / 2 blocked / 2 paper closes', stamp)
-    state['last'] = stamp.strftime('%H:%M:%S')
-
-import time
-import copy
-from html import escape
-
-STAGES = [
- ('CHIEF','পরিকল্পনা','এই অনুশীলনের ছয়টি কৃত্রিম pair যাচাইয়ের পরিকল্পনা করছে।','ইনপুট: ডেমো capital ও ছয়টি বানানো pair','পরিকল্পনা প্রস্তুত; কোনো আসল agent-কে কাজ দেওয়া হয়নি।'),
- ('SCOUT','নমুনা pair খোঁজা','ছয়টি বানানো token pair স্ক্যান করছে; কোনো বাজার থেকে তথ্য নিচ্ছে না।','ইনপুট: deterministic demo generator','ছয়টি কৃত্রিম pair পাওয়া গেছে।'),
- ('RISK','নমুনা ঝুঁকি যাচাই','বানানো liquidity ও concentration flag পরীক্ষা করছে।','ইনপুট: ছয়টি কৃত্রিম pair','দুটি ডেমো pair বাদ; চারটি পরের ধাপে। এটি আসল safety clearance নয়।'),
- ('WHALE','নমুনা holder বিশ্লেষণ','চারটি pair-এর কাল্পনিক holder distribution দেখছে।','ইনপুট: চারটি রাখা pair; কোনো wallet data নয়','কাল্পনিক holder check শেষ; আসল holder যাচাই হয়নি।'),
- ('SHILL','নমুনা social বিশ্লেষণ','বানানো narrative context পড়ছে; X বা social feed ব্যবহার করছে না।','ইনপুট: কৃত্রিম narrative text','Mock social context নথিভুক্ত; বাস্তব sentiment অজানা।'),
- ('SIGNAL','নমুনা score ও size','ডেমো score হিসাব করে দুটি কাল্পনিক trade নির্বাচন করছে।','ইনপুট: demo score ও illustrative sizing rule','দুটি ডেমো entry নির্বাচিত; দুটি watch-only। এটি buy recommendation নয়।'),
- ('SNIPER','কাগুজে entry','শুধু এই UI-এর স্মৃতিতে দুটি কাল্পনিক entry তৈরি করছে।','ইনপুট: দুটি নির্বাচিত ডেমো pair','দুটি virtual entry প্রস্তুত; কোনো বাস্তব order পাঠানো হয়নি।'),
- ('RUG','কাল্পনিক position watch','ডেমো entry দুটির জন্য বানানো threat scenario দেখছে।','ইনপুট: দুটি virtual position','Mock watch শেষ; বাস্তব position বা threat monitoring নেই।'),
- ('EXIT','কাগুজে close','কাল্পনিক exit ও illustrative fee হিসাব করছে।','ইনপুট: demo entry, synthetic return, 0.20% illustrative fee','দুটি virtual close গণনা শেষ; JOURNAL-এ একবারই balance লেখা হবে।'),
- ('JOURNAL','হিসাব ও সারাংশ','ডেমো ledger, balance, equity ও log একবার আপডেট করছে।','ইনপুট: দুটি virtual round trip','ডেমো cycle শেষ। সব কাগুজে position closed; ledger মিলেছে।')]
-ORDER=[x[0] for x in STAGES]
-
-def fresh():
- return {'cycle':0,'balance':INITIAL,'scanned':0,'blocked':0,'trades':[],'scanner':[],'activity':[],
-         'last':'—','equity':[{'Cycle':0,'Equity ($)':INITIAL,'Time':now().isoformat()}]}
-
-# Migrate old instantaneous/preloaded demo state: keep its ledger visibly separate.
-if st.session_state.get('activity_ui_version') != 3:
- old=st.session_state.get('terminal')
- if old:
-  st.session_state['previous_demo_summary']={'cycles':old.get('cycle',0),'balance':old.get('balance',INITIAL)}
- st.session_state['terminal']=fresh()
- st.session_state['playback']={'running':False,'index':0,'cycle_id':0,'settled':False,'completed':False,'timeline':[]}
- st.session_state['activity_ui_version']=3
-s=st.session_state['terminal']; play=st.session_state['playback']
-
-def start_cycle():
- if play['running']:return
- preview=copy.deepcopy(s)
- cycle(preview)  # Pure session-local forecast; never mutates the displayed ledger.
- play.update(running=True,index=0,cycle_id=s['cycle']+1,settled=False,completed=False,
-             due=time.monotonic()+2.0,preview=preview)
-
-def advance_stage():
- if not play['running']:return
- idx=play['index']; name,title,action,inputs,result=STAGES[idx]
- stamp=now().strftime('%H:%M:%S')
- play['timeline'].append({'Cycle':f'DEMO-{play["cycle_id"]:03d}','Time (UTC+6)':stamp,
-  'Agent':name,'কাজ':title,'ডেমো ইনপুট':inputs,'কৃত্রিম ফল / সিদ্ধান্ত':result,'অবস্থা':'শেষ · DEMO'})
- if idx==9:
-  if not play['settled']:
-   forecast=play['preview']
-   # One atomic settlement per user-triggered cycle; no rerun can re-book it.
-   for key in ['cycle','balance','scanned','blocked','trades','scanner','equity']:
-    s[key]=forecast[key]
-   s['last']=stamp
-   s['activity']=[{'Time (UTC+6)':r['Time (UTC+6)'],'Agent':r['Agent'],
-       'Simulated activity':r['কাজ']+' — '+r['কৃত্রিম ফল / সিদ্ধান্ত']} for r in play['timeline']]
-   play['settled']=True
-  play.update(running=False,completed=True,index=10)
- else:
-  play['index']+=1;play['due']=time.monotonic()+2.0
-
-# No loop, sleeps, worker, or scheduled activity. Timer exists only for one requested demo cycle.
-@st.fragment(run_every=1 if play['running'] else None)
-def tick():
- if play['running'] and time.monotonic()>=play['due']:
-  advance_stage()
-  st.rerun()
-tick()
+st.set_page_config(page_title='PumpGrok | Market Scanner v2',page_icon='◈',layout='wide')
+BASE=Path(__file__).parent
+store=Store(Path(os.environ.get('PUMPGROK_TERMINAL_DB',str(BASE/'market_paper_terminal/data/terminal.sqlite3'))))
+TZ=ZoneInfo('Asia/Dhaka')
+LOCALIZED=re.compile('[\u0980-\u09ff]')
+def english(value):
+ """Presentation only: do not alter historical evidence in the database."""
+ if isinstance(value,str) and LOCALIZED.search(value):return 'Localized source text hidden; original preserved in database.'
+ if isinstance(value,dict):return {english(k):english(v) for k,v in value.items()}
+ if isinstance(value,list):return [english(v) for v in value]
+ return value
+def local(stamp):
+ try:return datetime.fromisoformat(stamp).astimezone(TZ).strftime('%d %b %H:%M:%S UTC+6')
+ except (ValueError,TypeError):return 'Unknown'
+def html(value):st.markdown(value,unsafe_allow_html=True)
+def table(frame):
+ if frame.empty:st.caption('No records yet.');return
+ frame=frame.map(english)
+ styled=frame.style.set_properties(**{'background-color':'#111c2e','color':'#d2deee','border-color':'#25354c','font-size':'13px'})
+ st.dataframe(styled,hide_index=True,width='stretch',height=min(390,72+len(frame)*36))
+def legacy_message(event):
+ text=event['message']
+ if not LOCALIZED.search(text):return text
+ summaries={'CODE / DISCOVERY':'Read public discovery profiles.','CODE / MARKET':'Read exact-mint public pair data.',
+ 'CODE / EVIDENCE':'Validated market observations; mandatory safety audit remains BLIND.',
+ 'CODE / JOURNAL':'Saved observations and provenance; no orders placed.'}
+ return summaries.get(event['stage'],'Historical code event.')+' [Legacy localized log; original retained.]'
 
 st.markdown('''<style>
-:root{color-scheme:light!important}.stApp,[data-testid="stAppViewContainer"]{background:#fafafa!important;color:#303941!important}
-body,p,span,label,button,input{font-family:"Noto Sans Bengali","Nirmala UI","Vrinda",system-ui,sans-serif!important}
-[data-testid="stHeader"]{background:transparent}.block-container{max-width:1280px;padding:2rem 1.5rem}
-[data-testid="stVerticalBlock"]{gap:.7rem}p{font-size:14px;color:#4b555f}.mono,.brand,.money,.tiny{font-family:ui-monospace,Consolas,monospace!important}
-.header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px dashed #d4d9df;padding-bottom:16px;margin-bottom:4px}.brand{font-size:23px;font-weight:700;color:#30353e}.brand b{color:#437bdf}.pause{display:inline-grid;place-items:center;background:#eceef1;color:#a1a9b1;border-radius:50%;width:42px;height:42px;margin-right:12px;font-size:18px}.money{font-size:27px;text-align:right}.tiny{font-size:11px;color:#73808c}.green{color:#2d9161}.pink{color:#bf6385}.badge{font-size:11px;color:#54795f;background:#e8f3eb;border:1px solid #c5dfcd;border-radius:5px;padding:4px 7px}
-.current{border:1px solid #afd6c0;border-left:5px solid #5aa97e;border-radius:10px;background:#f1f8f4;padding:20px;margin-bottom:4px}.current.idle{background:#f3f5f8;border-color:#cbd3df;border-left-color:#8c9db5}.eyebrow{font-size:12px;color:#647a6e;font-weight:600}.current h2{font-size:25px;margin:8px 0 10px;line-height:1.4;color:#283c31}.current p{font-size:16px;line-height:1.7;margin:6px 0}.next{margin-top:12px;padding-top:12px;border-top:1px dashed #bfcfc4;color:#54725f;font-size:14px}.finding{background:#fff;border:1px solid #dfebe3;border-radius:6px;padding:10px;font-size:14px;color:#52675a;margin-top:10px}
-.seat{border:1px solid #e0e4e9;background:#fff;border-radius:8px;padding:12px;margin-bottom:8px}.seat.active{background:#edf8f1;border:2px solid #71b68c}.seat.done{border-color:#cce0d2}.seat-head{display:flex;justify-content:space-between;align-items:center;font:600 13px monospace;color:#53566c}.seat p{font-size:12px;margin:5px 0 0;color:#67727e}.status{font-size:11px;color:#8b7d9b;background:#f1edf7;padding:3px 5px;border-radius:4px}.active .status{background:#cfe9d8;color:#256d47}.done .status{background:#ebf3ed;color:#598568}
-[data-testid="stMetric"]{border:1px solid #e2e5e9;background:#fff;border-radius:8px;padding:12px}[data-testid="stMetricValue"]{font-family:monospace;font-size:24px;color:#394b45}[data-testid="stMetricLabel"] p{font-size:12px}
-.stButton>button{background:#edf6f0!important;color:#32684a!important;border:1px solid #b4d4c0!important;border-radius:6px;min-height:40px}.stButton>button p{font-size:14px!important;color:#32684a!important}.stButton>button:disabled{opacity:.5}[data-baseweb="tab"]{font-size:13px!important;color:#647383!important}[data-baseweb="tab-highlight"]{background:#7ba4cb!important}[data-testid="stCaptionContainer"] p{font-size:12px;color:#74818d}
-.log{border-bottom:1px solid #e5e8ec;padding:11px 0;display:grid;grid-template-columns:100px 80px 1fr;gap:12px;font-size:13px;color:#57636d}.log b{color:#69628a;font-family:monospace}.log small{color:#86909a}.log div:last-child{line-height:1.7}.log .decision{color:#557b63}.section{font-size:13px;font-weight:700;letter-spacing:.5px;color:#6c7b87;border-bottom:1px dashed #d9dfe4;padding:12px 0 8px}
-@media(max-width:760px){.block-container{padding:1.6rem .8rem}.brand{font-size:18px}.pause{display:none}.money{font-size:21px}.current{padding:15px}.current h2{font-size:22px}.current p{font-size:15px}.log{grid-template-columns:75px 65px 1fr;font-size:12px;gap:5px}.header{gap:8px}}
+:root{color-scheme:dark!important;--background-color:#070b14;--secondary-background-color:#111c2e;--text-color:#d9e5f5;--primary-color:#45d9b3}
+html,body,.stApp,[data-testid="stAppViewContainer"]{background:#070b14!important;color:#d9e5f5!important}
+.block-container{max-width:1440px;padding:2rem 2rem 1.5rem}[data-testid="stHeader"]{background:rgba(7,11,20,.9)}
+p,span,label,button,input{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif!important}p{font-size:14px;color:#a7b8d0;line-height:1.65}h1,h2,h3{color:#e7effb!important;letter-spacing:-.03em}h3{font-size:18px!important}
+.header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #223049;padding:0 0 19px;margin-bottom:14px;gap:16px}.brand{font:700 24px ui-monospace,Consolas,monospace;letter-spacing:-1px;color:#edf5ff}.brand b{color:#5bdddb}.brand-icon{color:#49dab0;margin-right:10px}.version{font:11px ui-monospace,monospace;color:#8095b4;margin-top:9px;letter-spacing:.4px}.chips{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.chip{padding:6px 9px;border:1px solid #28594f;border-radius:5px;background:#0d2926;color:#5cdbb5;font:600 10px monospace;letter-spacing:.7px}.chip.cyan{background:#0e2431;border-color:#215065;color:#70d7ed}.chip.amber{background:#2d2518;border-color:#59472a;color:#e1bd7a}
+.safety{background:#211d16;border:1px solid #4a3b29;border-radius:8px;padding:12px 16px;display:flex;gap:13px;align-items:flex-start;color:#c6b690;font-size:13px;line-height:1.6;margin-bottom:13px}.safety strong{color:#e8c180;white-space:nowrap;font:600 11px monospace;padding-top:3px}.safety span{color:#c9bb9f}.state{background:linear-gradient(110deg,#0f2130,#101a2a);border:1px solid #284458;border-left:3px solid #47c9c8;border-radius:9px;padding:18px 20px;margin:7px 0}.state-head{display:flex;justify-content:space-between;gap:10px}.eyebrow{font:10px monospace;letter-spacing:1.7px;color:#7f9ab7}.state h2{font-size:22px;margin:8px 0;color:#dcebf9}.state p{margin:6px 0;font-size:14px;color:#a9bdd2}.state .next{font-size:12px;color:#70bdb1;border-top:1px solid #253a4b;padding-top:11px;margin-top:12px}.idle{color:#94abc2;font:11px monospace}.working{color:#6de1ce;font:11px monospace}
+[data-testid="stMetric"]{background:linear-gradient(130deg,#111c2e,#0e1727);border:1px solid #24334a;border-radius:9px;padding:14px 16px}[data-testid="stMetricValue"]{font:25px ui-monospace,monospace;color:#e4effd}[data-testid="stMetricLabel"] p{color:#90a6c1;font-size:11px;font-weight:500}[data-testid="stHorizontalBlock"]{gap:1.1rem}.section{font:600 11px monospace;letter-spacing:1.2px;color:#899db8;margin:16px 0 11px}.seat{background:#0e1727;border:1px solid #223149;border-radius:8px;padding:12px 13px;margin-bottom:8px}.seat b{font:600 12px monospace;color:#b7b2e0}.seat span{font:8px monospace;color:#8a9bb4;background:#1b2638;padding:4px 5px;border-radius:4px;float:right}.seat p{font-size:11px;color:#91a3be;margin:7px 0 0;line-height:1.5}.seat-note{font-size:11px;color:#7f92ac;line-height:1.8;border-top:1px solid #26364b;padding-top:14px;margin-top:14px}.health{background:#0e1827;border:1px solid #26364a;border-radius:8px;padding:13px 16px;margin-bottom:10px}.health-title{font:11px monospace;color:#7fbeb2;letter-spacing:.8px}.health-time{font:11px monospace;color:#879bb6;margin-top:8px}.foot{font:11px monospace;color:#7186a3;border-top:1px solid #243149;padding-top:15px;margin-top:20px;line-height:1.9}
+.stButton>button,[data-testid="stFormSubmitButton"]>button{background:#123b35!important;border:1px solid #338a77!important;color:#91f3d1!important;border-radius:6px!important;min-height:39px!important;box-shadow:0 0 16px #25bc8d0c}.stButton>button p,[data-testid="stFormSubmitButton"]>button p{color:#91f3d1!important;font-size:13px!important;font-weight:600}.stButton>button:hover{background:#195044!important;border-color:#54c8a8!important}.stLinkButton>a{background:#10232e!important;color:#82d5e9!important;border:1px solid #2b4e60!important;font-size:12px!important}
+[data-baseweb="select"]>div,[data-baseweb="input"],[data-baseweb="input"]>input,[data-testid="stNumberInputContainer"]{background:#111d30!important;color:#dae6f7!important;border-color:#30435f!important}input{color:#dbe8f8!important}[data-testid="stNumberInput"] button{background:#1b2a40!important;color:#c8d8ed!important}[data-baseweb="popover"],[data-baseweb="popover"] ul,[data-baseweb="menu"]{background:#142137!important;color:#d5e4f5!important}[role="option"]{background:#142137!important;color:#d5e4f5!important}[role="option"]:hover{background:#203651!important}
+[data-baseweb="tab-list"]{gap:25px;border-bottom:1px solid #26334b}[data-baseweb="tab"]{background:transparent!important;color:#8ea6c4!important;font-size:12px!important}[data-baseweb="tab"][aria-selected="true"]{color:#66d5c3!important}[data-baseweb="tab-highlight"]{background:#42bfa9!important;height:2px!important}
+[data-testid="stDataFrame"]{border:1px solid #293b53;border-radius:8px;--gdg-bg-cell:#111c2e;--gdg-bg-header:#18273c;--gdg-text-dark:#d7e4f5;--gdg-text-medium:#a3bad3;--gdg-border-color:#263950;--gdg-accent-color:#3bcda7}
+[data-testid="stJson"],[data-testid="stJson"]>div,[data-testid="stCode"]{background:#101b2b!important;color:#bfd1e7!important;border-color:#293a51!important}[data-testid="stExpander"],[data-testid="stForm"]{background:#0d1625!important;border-color:#273950!important;border-radius:8px}[data-testid="stExpander"] details summary p{color:#b8cce3!important}[data-testid="stCaptionContainer"] p{color:#7d94b2;font-size:12px;line-height:1.7}[data-testid="stAlert"]{background:#142238!important;border:1px solid #2b405b!important;color:#c3d6ee!important;border-radius:7px}[data-testid="stAlert"] p{color:#c3d6ee!important}[data-testid="stStatusWidget"]{background:#101e2e!important;border-color:#2b475a!important;color:#bcd4e9!important}[data-testid="stToast"]{background:#18293d!important;color:#c4dfec!important}
+@media(max-width:760px){.block-container{padding:1.6rem .8rem}.header{align-items:flex-start;flex-direction:column;gap:12px}.brand{font-size:21px}.chips{justify-content:flex-start}.state{padding:15px}.state h2{font-size:20px}.safety{flex-direction:column;gap:6px}[data-testid="stMetricValue"]{font-size:22px}.version{font-size:10px}}
 </style>''',unsafe_allow_html=True)
 
-def html(x):st.markdown(x,unsafe_allow_html=True)
-pnl=round(s['balance']-INITIAL,2)
-html(f'<div class="header"><div><div class="brand"><span class="pause">Ⅱ</span><b>Grok Bot</b> Terminal</div><div class="tiny">PUMPGROK / SYNTHETIC DEMO · UTC+6</div></div><div><div class="money">${s["balance"]:,.2f}</div><div class="tiny">ডেমো balance · {len(s["trades"])} paper trades</div></div></div>')
-st.warning('শুধু অনুশীলন—আসল agent বা বাজারের সঙ্গে সংযোগ নেই। নিচের সব কাজ ও ফল এই UI-এর কৃত্রিম simulation; আসল PumpGrok desk অপরিবর্তিত।')
-if 'previous_demo_summary' in st.session_state:
- st.caption('নতুন ধাপে-ধাপে UI শুরু হয়েছে। আগের সংস্করণের sample/demo history নতুন user-run cycle থেকে আলাদা করা হয়েছে; এই session-এর হিসাব $10,000 illustrative capital থেকে নতুন করে শুরু।')
-
-if play['running']:
- idx=play['index']; name,title,action,inputs,result=STAGES[idx]
- next_text=(f'{STAGES[idx+1][0]} — {STAGES[idx+1][1]}' if idx<9 else 'cycle শেষ; কোনো কাজ চলবে না')
- current_done=[r for r in play['timeline'] if r['Cycle']==f'DEMO-{play["cycle_id"]:03d}']
- previous=current_done[-1]['কৃত্রিম ফল / সিদ্ধান্ত'] if current_done else 'এই cycle-এ এখনও কোনো ধাপ শেষ হয়নি।'
- html(f'<div class="current"><div class="eyebrow">এখন কী হচ্ছে · DEMO-{play["cycle_id"]:03d} · ধাপ {idx+1}/10</div><h2>● {name} — {title}</h2><p>{action}</p><p>{inputs}</p><div class="finding">আগের ধাপের ফল: {escape(previous)}</div><div class="next">এরপর: {next_text}<br>প্রতি প্রায় ২ সেকেন্ডে পরের ধাপ; নিচের বাটন দিয়েও এগোনো যায়।</div></div>')
-else:
- message='শেষ ডেমো cycle সম্পূর্ণ হয়েছে।' if play['completed'] else 'এখন কোনো কাজ চলছে না—cycle শুরু করুন।'
- html(f'<div class="current idle"><div class="eyebrow">এখন কী হচ্ছে · IDLE / DEMO</div><h2>{message}</h2><p>দশটি simulated agent-এর কাজ একে একে দেখতে <b>Run Scanner Cycle</b> চাপুন। কোনো আসল agent কাজ শুরু করবে না।</p><div class="next">পরের কাজ: CHIEF পরিকল্পনা → SCOUT নমুনা scan।<br>কোনো background scan বা বাস্তব monitoring চলছে না।</div></div>')
-st.progress(play['index']/10 if (play['running'] or play['completed']) else 0,
- text=f'ডেমো অগ্রগতি: {play["index"]}/10 ধাপ শেষ')
-a,b,c=st.columns([1.3,1,2])
-with a:st.button('Run Scanner Cycle',on_click=start_cycle,disabled=play['running'],width='stretch')
-with b:st.button('পরের ধাপ',on_click=advance_stage,disabled=not play['running'],width='stretch')
-with c:st.caption('একবারে একটি cycle। শেষ ধাপে ledger একবার লেখা হয়। খোলা browser-এ শুধু এই cycle-এর demo playback চলবে।')
-metrics=st.columns(4)
-metrics[0].metric('অনুশীলনের balance',f'${s["balance"]:,.2f}')
-metrics[1].metric('ডেমো net P&L',f'${pnl:+,.2f}')
-metrics[2].metric('স্ক্যান করা নমুনা pair',s['scanned'])
-metrics[3].metric('বাদ দেওয়া ডেমো ঝুঁকি',s['blocked'])
-if play['running']:st.caption('চলমান cycle-এর ফল এখনও provisional। JOURNAL ধাপ শেষ হলে উপরের হিসাব, equity ও trade log একসঙ্গে আপডেট হবে।')
-rail,body=st.columns([1,2.7],gap='large')
+html('<div class="header"><div><div class="brand"><span class="brand-icon">◈</span><b>PumpGrok</b> Terminal</div><div class="version">Market Scanner v2 • English / Dark</div></div><div class="chips"><span class="chip cyan">REAL MARKET DATA</span><span class="chip">PAPER ONLY</span><span class="chip amber">EXECUTION LOCKED</span></div></div>')
+halt=halt_status()
+html('<div class="safety"><strong>EXECUTION LOCKED</strong><span>'+escape(halt)+'. Desk engine not connected; effective configuration unverified. All paper buys and sells remain locked. No wallets or live orders.</span></div>')
+current=st.empty()
+current.markdown('<div class="state"><div class="state-head"><span class="eyebrow">CURRENT ACTIVITY / RESEARCH SCANNER</span><span class="idle">● IDLE</span></div><h2>Ready for a read-only market scan</h2><p>No scan is running. Start a cycle to fetch real public profiles and exact-mint pair data, validate the response, and save source evidence.</p><div class="next">Next: code discovery → market data → evidence checks → storage. This is not activity from the ten assistant Bots.</div></div>',unsafe_allow_html=True)
+if st.button('Run Scanner Cycle',type='primary'):
+ with st.status('Reading public market data…',expanded=True) as status:
+  def progress(stage,text):
+   text=english(text)
+   current.markdown(f'<div class="state"><div class="state-head"><span class="eyebrow">CURRENT ACTIVITY / {escape(stage)}</span><span class="working">● CODE RUNNING</span></div><h2>Read-only scanner cycle</h2><p>{escape(text)}</p><div class="next">Public API reads only. No assistant Bot or order execution has been started.</div></div>',unsafe_allow_html=True)
+   st.write(f'**{stage}** — {text}')
+  result=scan(store,progress=progress)
+  health=store.get('health',{})
+  status.update(label='Scan result: '+english(result['message']),state='error' if health.get('status') in ('ERROR','BLOCKED') else 'complete',expanded=True)
+ st.session_state['scan_result']=result
+ current.markdown('<div class="state"><div class="state-head"><span class="eyebrow">CURRENT ACTIVITY</span><span class="idle">● IDLE</span></div><h2>Request finished</h2><p>'+escape(english(result['message']))+'</p><div class="next">No fetch is running. No trade was placed.</div></div>',unsafe_allow_html=True)
+if st.session_state.get('scan_result'):st.caption(english(st.session_state['scan_result']['message']))
+st.caption('Manual cycles only · 30-second shared cooldown · Up to 8 discovered mints per batch · No scheduled polling or synthetic fallback')
+rows=store.rows();health=store.get('health',{});cash=store.cash()
+cols=st.columns(5)
+for col,label,value in zip(cols,['Paper Cash / Equity','Realized / Unrealized P&L','Unique Pairs Observed','Confirmed Rugs Blocked','Open Paper Positions'],[f'${cash:.2f}','$0.00 / $0.00',len(rows),0,0]):col.metric(label,value)
+st.caption('Paper capital: $50. No filled trades or completed on-chain audits. Missing evidence is BLIND, not proof of a rug.')
+rail,body=st.columns([1,3],gap='large')
 with rail:
- html('<div class="section">কোন agent কী করে · সবই DEMO</div>')
- for idx,(name,title,action,inputs,result) in enumerate(STAGES):
-  active=play['running'] and play['index']==idx
-  done=(play['running'] and idx<play['index']) or play['completed']
-  status='চলছে · DEMO' if active else ('শেষ · DEMO' if done else 'অপেক্ষা · DEMO')
-  html(f'<div class="seat {"active" if active else "done" if done else ""}"><div class="seat-head">{idx+1:02d} {name}<span class="status">{status}</span></div><p>{title}</p></div>')
+ html('<div class="section">AGENT STATUS / 10 SEATS</div>')
+ for role,description in ROLES.items():html(f'<div class="seat"><b>{role}</b><span>NOT CONNECTED</span><p>{escape(english(description))}</p></div>')
+ html('<div class="seat-note">Scanner activity is executed by local code, not these assistants.<br>Risk, holder, social and execution integrations are incomplete.<br>No autonomy has been activated.</div>')
 with body:
- html('<div class="section">এই cycle-এ যা হয়েছে · chronological activity</div>')
- current_logs=[r for r in play['timeline'] if r['Cycle']==f'DEMO-{play["cycle_id"]:03d}']
- if not current_logs:st.info('এখনও কোনো ধাপ শেষ হয়নি। cycle শুরু হলে প্রতিটি agent-এর ইনপুট, কাজ ও ডেমো ফল এখানে আসবে।')
- for r in current_logs:
-  html(f'<div class="log"><div><small>{r["Time (UTC+6)"]}<br>UTC+6</small></div><b>{r["Agent"]}</b><div><strong>{r["কাজ"]} — শেষ</strong><br>{r["ডেমো ইনপুট"]}<br><span class="decision">ফল: {r["কৃত্রিম ফল / সিদ্ধান্ত"]}</span></div></div>')
- html('<div class="section">Equity curve · শুধু settled demo balance</div>')
- eq=pd.DataFrame(s['equity']);low=eq['Equity ($)'].min();high=eq['Equity ($)'].max();pad=max((high-low)*.3,15)
- fig=go.Figure(go.Scatter(x=eq['Cycle'],y=eq['Equity ($)'],mode='lines+markers',line=dict(color='#73ae8b',width=2),
-  hovertemplate='Demo cycle %{x}<br>Paper equity $%{y:,.2f}<extra></extra>'))
- fig.update_layout(height=210,margin=dict(l=5,r=10,t=10,b=30),paper_bgcolor='#fafafa',plot_bgcolor='#fafafa',
-  font=dict(family='monospace',size=11,color='#76818c'),xaxis=dict(title='Completed demo cycle',dtick=1,gridcolor='#eceef0'),
-  yaxis=dict(title='Paper USD',tickprefix='$',range=[low-pad,high+pad],gridcolor='#eceef0'))
- st.plotly_chart(fig,width='stretch',config={'displayModeBar':False})
+ html('<div class="section">DATA SOURCES / PROVIDER HEALTH</div>')
+ health_status=health.get('status','NOT FETCHED')
+ last=store.get('last_success')
+ freshness='NOT FETCHED' if not last else ('STALE DATA' if age(last)>FRESH_SECONDS else 'RECENT RETRIEVAL')
+ html(f'<div class="health"><div class="health-title">DEXSCREENER PUBLIC API · {escape(health_status)} · {freshness}</div><div class="health-time">Last successful retrieval: {local(last)}</div></div>')
+ if health.get('error'):st.warning(english(health['error']))
+ if store.get('provider_blocked'):st.warning('Provider access denied. Requests are stopped; no alternate route will be attempted. Owner/provider support is required.')
+ st.caption('LIVE DATA SOURCE • Retrieval older than 60 seconds is STALE. The provider does not publish a price observation timestamp: retrieval age is not price age. Errors retain timestamped last-good data.')
+ st.link_button('Official API Documentation',DOCS)
+ st.subheader('Market Scanner')
+ display=[]
+ for r in rows:
+  display.append({'Symbol (unverified)':english(r['symbol']),'Mint':r['mint'],'Pair':r['pair'],'Venue':english(r['venue']),
+   'Indicative USD':r['price_usd'],'Liquidity USD':r['liquidity_usd'],'Volume 1h USD':r['volume_h1_usd'],
+   'Retrieved':local(r['fetched_utc']),'Freshness':'STALE' if age(r['fetched_utc'])>FRESH_SECONDS else 'RECENT RETRIEVAL',
+   'Price timestamp':'UNKNOWN','Source':r['url']})
+ table(pd.DataFrame(display))
+ st.caption('Discovery uses latest profiles, not the entire market or guaranteed new launches. Exact mint/pair addresses establish identity; symbols are unverified. Missing values are unavailable, never safe or zero. These prices are indicative marks, not executable quotes.')
+ if rows:
+  mint=st.selectbox('Select Exact Mint',sorted({r['mint'] for r in rows}))
+  candidates=[r for r in rows if r['mint']==mint]
+  selected=st.selectbox('Pair / Venue',list(range(len(candidates))),format_func=lambda i:candidates[i]['pair']+' / '+english(candidates[i]['venue']))
+  row=candidates[selected]
+  st.subheader('Safety Gates')
+  evidence=audit(row)
+  table(pd.DataFrame([{'Check':k,'Evidence':v} for k,v in evidence.items() if k not in ['mint','pair']]))
+  with st.expander('Field-Level Provenance / Normalized Observation'):st.json(english(row))
+  st.subheader('Research Ticket Preview')
+  st.caption('Draft only. Exact manual approval and the core quote → simulate → place path are unavailable. This form cannot place orders.')
+  with st.form('draft_ticket'):
+   side=st.selectbox('Side',['BUY','SELL'])
+   usd=st.number_input('Notional USD — maximum $2.50',min_value=0.01,max_value=2.50,value=2.50,step=0.01)
+   slip=st.number_input('Maximum Slippage % — cap 3%',min_value=0.01,max_value=3.0,value=3.0,step=0.1)
+   ticket={'mint':mint,'pair':row['pair'],'side':side,'usd':f'{usd:.2f}','slippage':f'{slip:.2f}'}
+   st.json(ticket)
+   save=st.form_submit_button('Save Research Draft — No Order')
+  with st.expander('Execution Lock Details',expanded=False):
+   for reason in gate(ticket,row,halt=halt):st.caption('🔒 '+english(reason))
+  if save:
+   tid=store.ticket(ticket);store.log('CODE / TICKET','Research draft saved; NOT approved; fills locked. ID '+tid[:12])
+   st.success('Local research draft saved: '+tid[:12]+'. No order or fill was created.')
+ else:st.caption('Run a real-data scan before creating an exact-mint research draft.')
 
-scanner_tab,trades_tab,logs_tab=st.tabs(['নমুনা scanner feed','Paper trade log','সব agent-এর activity'])
-def table(frame):
- if frame.empty:
-  st.caption('এখনও কোনো settled demo record নেই।');return
- st.dataframe(frame.style.set_properties(**{'background-color':'white','color':'#4e5b67','font-size':'13px'}),hide_index=True,width='stretch',height=300)
-with scanner_tab:
- st.caption('আসল live feed নয়। SCOUT ধাপ শেষ হলে provisional নমুনা দেখা যায়; JOURNAL শেষে settled হয়।')
- if play['running'] and play['index']>=2:
-  st.caption('চলমান cycle · provisional synthetic candidates')
-  candidates=pd.DataFrame(play['preview']['scanner'][-6:]).copy()
-  if play['index']<3:
-   candidates=candidates.drop(columns=['Decision','Reason','Score'])
-  elif play['index']<7:
-   candidates['Decision']=candidates['Decision'].replace({'PAPER FILLED':'DEMO CANDIDATE'})
-   candidates['Reason']=candidates['Reason'].replace({'Round trip closed':'ডেমো entry এখনও হয়নি'})
-  table(candidates)
- else:table(pd.DataFrame(s['scanner'][::-1]))
-with trades_tab:
- st.caption('কাগুজে round trip; কোনো আসল order নয়। Entry → watch → close → JOURNAL শেষে net fees-সহ ledger লেখা হয়।')
- table(pd.DataFrame(s['trades'][::-1]))
-with logs_tab:
- agent=st.selectbox('Filter simulated agent',['All agents']+ORDER)
- table(pd.DataFrame([r for r in play['timeline'] if agent=='All agents' or r['Agent']==agent]))
-st.caption('SIMULATED PAPER ONLY · Illustrative starting capital $10,000 · Round-trip illustrative fee 0.20% · Session-local history; restart/new session resets it · Asia/Dhaka (UTC+6).')
+curve_tab,trade_tab,log_tab,limits_tab=st.tabs(['Equity / Portfolio','Research Drafts','Activity Log','Safety / Integration'])
+with curve_tab:
+ st.write(f'Paper cash ${cash:.2f} · positions $0.00 · fees $0.00 · equity ${cash:.2f}')
+ fig=go.Figure(go.Scatter(x=['Initial paper capital'],y=[cash],mode='markers',marker=dict(color='#57dfb5',size=10,line=dict(color='#a2ffe3',width=1)),hovertemplate='Paper cash $%{y:.2f}<extra></extra>'))
+ fig.update_layout(template='plotly_dark',height=220,paper_bgcolor='#0e1727',plot_bgcolor='#0e1727',font=dict(family='monospace',color='#94abc7',size=11),yaxis=dict(title='Paper USD',range=[49,51],gridcolor='#213149',zeroline=False),xaxis=dict(gridcolor='#213149'),margin=dict(l=15,r=15,t=15,b=25),hoverlabel=dict(bgcolor='#1a2c43',font_color='#d7f3ee'))
+ st.plotly_chart(fig,width='stretch',config={'displayModeBar':False})
+ st.caption('One initial capital point. No profit curve has been invented. With execution unavailable, positions, fees and P&L remain zero. Indicative market prices are never treated as fills.')
+with trade_tab:
+ st.write('Trade Log: no filled trades — engine disconnected / execution locked.')
+ table(pd.DataFrame(store.tickets()))
+ st.caption('Only local research drafts appear above. They are not approved tickets or fills.')
+with log_tab:
+ events=store.events();stages=['All Code Stages']+sorted({english(e['stage']) for e in events})
+ choice=st.selectbox('Code-Stage Filter',stages)
+ table(pd.DataFrame([{'Time (UTC+6)':local(e['utc']),'Code Stage':e['stage'],'Actual Action / Result':legacy_message(e)} for e in events if choice==stages[0] or english(e['stage'])==choice]))
+ st.caption('Historical localized events are summarized in English for display; original evidence is preserved unchanged in SQLite.')
+with limits_tab:
+ st.write('Owner limits: $50 paper capital · $2.50 maximum trade · 3% maximum slippage · 3 open positions · $2.50 daily realized + unrealized loss entry freeze.')
+ st.write('Forbidden: active mint authority, active freeze authority, Token-2022 transfer tax. Missing mandatory evidence blocks fills.')
+ st.warning('Effective configuration agreement is UNVERIFIED. Legacy engine defaults reportedly differ. This UI does not modify engagement, risk configuration, approvals, or the desk halt.')
+ st.write('Still required: sanctioned engine integration, authoritative gates/configuration, genuine risk/holder/social evidence, fresh same-mint executable route/depth/fees, simulation, exact manual approval, idempotent fills/reconciliation, and mark-to-market position accounting.')
+ st.caption('This is a working real-data research scanner, not a completed paper broker. No alternate execution path, live mode, wallet, key handling, signing or broadcast capabilities exist.')
+html('<div class="foot">MARKET SCANNER V2 / ENGLISH / DARK · REAL PUBLIC DATA · PAPER RESEARCH ONLY<br>Persistent standalone SQLite evidence · Isolated from old synthetic history · Asia/Dhaka (UTC+6) display / UTC storage</div>')

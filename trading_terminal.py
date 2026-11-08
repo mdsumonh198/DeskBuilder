@@ -69,134 +69,158 @@ def cycle(state):
     event(state, 'CHIEF', f'Cycle {n:03d} complete • 6 scanned / 2 blocked / 2 paper closes', stamp)
     state['last'] = stamp.strftime('%H:%M:%S')
 
-if 'terminal' not in st.session_state:
-    st.session_state.terminal = {'cycle': 0, 'balance': INITIAL, 'scanned': 0, 'blocked': 0,
-        'trades': [], 'scanner': [], 'activity': [], 'last': '—',
-        'equity': [{'Cycle': 0, 'Equity ($)': INITIAL, 'Time': now().isoformat()}]}
-    for _ in range(5):
-        cycle(st.session_state.terminal)
-s = st.session_state.terminal
-
-# Reference-led, light monospaced terminal. The synthetic engine above is unchanged.
+import time
+import copy
 from html import escape
 
+STAGES = [
+ ('CHIEF','পরিকল্পনা','এই অনুশীলনের ছয়টি কৃত্রিম pair যাচাইয়ের পরিকল্পনা করছে।','ইনপুট: ডেমো capital ও ছয়টি বানানো pair','পরিকল্পনা প্রস্তুত; কোনো আসল agent-কে কাজ দেওয়া হয়নি।'),
+ ('SCOUT','নমুনা pair খোঁজা','ছয়টি বানানো token pair স্ক্যান করছে; কোনো বাজার থেকে তথ্য নিচ্ছে না।','ইনপুট: deterministic demo generator','ছয়টি কৃত্রিম pair পাওয়া গেছে।'),
+ ('RISK','নমুনা ঝুঁকি যাচাই','বানানো liquidity ও concentration flag পরীক্ষা করছে।','ইনপুট: ছয়টি কৃত্রিম pair','দুটি ডেমো pair বাদ; চারটি পরের ধাপে। এটি আসল safety clearance নয়।'),
+ ('WHALE','নমুনা holder বিশ্লেষণ','চারটি pair-এর কাল্পনিক holder distribution দেখছে।','ইনপুট: চারটি রাখা pair; কোনো wallet data নয়','কাল্পনিক holder check শেষ; আসল holder যাচাই হয়নি।'),
+ ('SHILL','নমুনা social বিশ্লেষণ','বানানো narrative context পড়ছে; X বা social feed ব্যবহার করছে না।','ইনপুট: কৃত্রিম narrative text','Mock social context নথিভুক্ত; বাস্তব sentiment অজানা।'),
+ ('SIGNAL','নমুনা score ও size','ডেমো score হিসাব করে দুটি কাল্পনিক trade নির্বাচন করছে।','ইনপুট: demo score ও illustrative sizing rule','দুটি ডেমো entry নির্বাচিত; দুটি watch-only। এটি buy recommendation নয়।'),
+ ('SNIPER','কাগুজে entry','শুধু এই UI-এর স্মৃতিতে দুটি কাল্পনিক entry তৈরি করছে।','ইনপুট: দুটি নির্বাচিত ডেমো pair','দুটি virtual entry প্রস্তুত; কোনো বাস্তব order পাঠানো হয়নি।'),
+ ('RUG','কাল্পনিক position watch','ডেমো entry দুটির জন্য বানানো threat scenario দেখছে।','ইনপুট: দুটি virtual position','Mock watch শেষ; বাস্তব position বা threat monitoring নেই।'),
+ ('EXIT','কাগুজে close','কাল্পনিক exit ও illustrative fee হিসাব করছে।','ইনপুট: demo entry, synthetic return, 0.20% illustrative fee','দুটি virtual close গণনা শেষ; JOURNAL-এ একবারই balance লেখা হবে।'),
+ ('JOURNAL','হিসাব ও সারাংশ','ডেমো ledger, balance, equity ও log একবার আপডেট করছে।','ইনপুট: দুটি virtual round trip','ডেমো cycle শেষ। সব কাগুজে position closed; ledger মিলেছে।')]
+ORDER=[x[0] for x in STAGES]
+
+def fresh():
+ return {'cycle':0,'balance':INITIAL,'scanned':0,'blocked':0,'trades':[],'scanner':[],'activity':[],
+         'last':'—','equity':[{'Cycle':0,'Equity ($)':INITIAL,'Time':now().isoformat()}]}
+
+# Migrate old instantaneous/preloaded demo state: keep its ledger visibly separate.
+if st.session_state.get('activity_ui_version') != 3:
+ old=st.session_state.get('terminal')
+ if old:
+  st.session_state['previous_demo_summary']={'cycles':old.get('cycle',0),'balance':old.get('balance',INITIAL)}
+ st.session_state['terminal']=fresh()
+ st.session_state['playback']={'running':False,'index':0,'cycle_id':0,'settled':False,'completed':False,'timeline':[]}
+ st.session_state['activity_ui_version']=3
+s=st.session_state['terminal']; play=st.session_state['playback']
+
+def start_cycle():
+ if play['running']:return
+ preview=copy.deepcopy(s)
+ cycle(preview)  # Pure session-local forecast; never mutates the displayed ledger.
+ play.update(running=True,index=0,cycle_id=s['cycle']+1,settled=False,completed=False,
+             due=time.monotonic()+2.0,preview=preview)
+
+def advance_stage():
+ if not play['running']:return
+ idx=play['index']; name,title,action,inputs,result=STAGES[idx]
+ stamp=now().strftime('%H:%M:%S')
+ play['timeline'].append({'Cycle':f'DEMO-{play["cycle_id"]:03d}','Time (UTC+6)':stamp,
+  'Agent':name,'কাজ':title,'ডেমো ইনপুট':inputs,'কৃত্রিম ফল / সিদ্ধান্ত':result,'অবস্থা':'শেষ · DEMO'})
+ if idx==9:
+  if not play['settled']:
+   forecast=play['preview']
+   # One atomic settlement per user-triggered cycle; no rerun can re-book it.
+   for key in ['cycle','balance','scanned','blocked','trades','scanner','equity']:
+    s[key]=forecast[key]
+   s['last']=stamp
+   s['activity']=[{'Time (UTC+6)':r['Time (UTC+6)'],'Agent':r['Agent'],
+       'Simulated activity':r['কাজ']+' — '+r['কৃত্রিম ফল / সিদ্ধান্ত']} for r in play['timeline']]
+   play['settled']=True
+  play.update(running=False,completed=True,index=10)
+ else:
+  play['index']+=1;play['due']=time.monotonic()+2.0
+
+# No loop, sleeps, worker, or scheduled activity. Timer exists only for one requested demo cycle.
+@st.fragment(run_every=1 if play['running'] else None)
+def tick():
+ if play['running'] and time.monotonic()>=play['due']:
+  advance_stage()
+  st.rerun()
+tick()
+
 st.markdown('''<style>
-:root{color-scheme:light!important}
-html,body,.stApp,[data-testid="stAppViewContainer"]{background:#fafafa!important;color:#292d34!important;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important}
-[data-testid="stHeader"]{background:transparent;height:1.6rem}
-.block-container{max-width:1280px;padding:2rem 2rem 1.5rem}
-[data-testid="stVerticalBlock"]{gap:.65rem}
-p,span,label,input,button,[data-testid="stCaptionContainer"]{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important}
-p{font-size:12px;color:#5c626c} [data-testid="stCaptionContainer"]{font-size:10px;color:#92969e}
-[data-testid="stHorizontalBlock"]{gap:1.25rem}
-.top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px dashed #d7d9df;padding:0 0 20px;margin-bottom:4px;gap:12px}
-.identity{display:flex;align-items:center;gap:17px}.pause{width:48px;height:48px;background:#eceef1;border-radius:50%;display:grid;place-items:center;color:#a3a7af;font-size:19px;letter-spacing:4px;padding-left:4px;flex-shrink:0}
-.brand{font-size:20px;font-weight:750;letter-spacing:-1px;color:#242731}.brand b{color:#437bdf}.meta{font-size:10px;color:#9296a0;margin-top:9px;line-height:1.8}.running{color:#359f6b}.badge{padding:3px 5px;border-radius:3px;font-size:8px;letter-spacing:.5px;background:#e8eaf9;color:#8580b8;margin-left:6px}.paper{background:#e9f5e9;color:#6a9874}
-.balance{text-align:right;font-size:27px;letter-spacing:-1.2px;font-weight:700}.balance small{font-size:9px;color:#999ea7;display:block;font-weight:400;letter-spacing:1px;margin-bottom:5px}.stats{font-size:10px;color:#969aa3;margin-top:8px;letter-spacing:0;font-weight:400}.green{color:#36aa79!important}.pink{color:#d47995!important}.blue{color:#5e8cd7!important}.purple{color:#a08bc4!important}.amber{color:#c6a257!important}
-.kicker{font-size:9px;letter-spacing:1.8px;color:#9c9fa7;text-transform:uppercase;margin:4px 0 11px}.rail{display:flex;flex-direction:column;gap:9px}.seat{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid #e7e8eb;border-radius:10px;padding:12px 11px;min-height:67px}.seat.active{background:#f0f9f4;border-color:#b6dfc8}.icon{background:var(--tint);color:var(--accent);width:32px;height:32px;display:grid;place-items:center;border-radius:7px;font-size:17px;flex-shrink:0}.active .icon{border:1px solid #74c99c;border-radius:50%;background:#e7f7ed}.seat-name{font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--accent)}.seat-sub{font-size:9px;color:#9a9da5;margin-top:5px}.pill{font-size:7px;color:#9b9ea5;background:#f4f4f6;border-radius:4px;padding:3px 4px;margin-left:auto;align-self:flex-start;white-space:nowrap}.rail-foot{border-top:1px dashed #d9dbe0;padding:13px 3px;margin-top:14px;color:#999da4;font-size:9px;line-height:1.8}
-.film{border:1px solid #e4e6ea;border-radius:10px;background-color:#fdfdfd;background-image:radial-gradient(#e1e5eb .75px,transparent .75px);background-size:13px 13px;padding:16px 17px 14px;overflow:hidden}.film-head{display:flex;justify-content:space-between;font-size:9px;letter-spacing:1.4px;color:#9297a2;margin-bottom:14px}.film-head strong{color:#6e9d7c;font-weight:400}.stage-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.stage{font-size:8px;color:#9599a1;letter-spacing:1px;min-width:0}.stage-card{background:#fff;border:1px solid #e2e5e9;border-radius:6px;padding:10px 7px;margin-top:7px;font-size:10px;color:#515963;letter-spacing:0;min-height:59px;overflow:hidden}.stage-card span{display:block;margin-top:7px;font-size:8px;color:#9a9fa7}.stage-card.good{border-color:#b7ddc7;background:#f0faf3}.stage-card.bad{border-color:#f0d6df;background:#fdf5f7}.wire{display:flex;justify-content:space-between;align-items:center;margin-top:13px;border-top:1px dashed #e1e5e8;padding-top:10px;font-size:9px;color:#9097a0}.executor{border:1px solid #7ec99f;background:#e8f6ed;color:#5ca579;border-radius:50%;width:29px;height:29px;display:grid;place-items:center;font-size:16px}.wire .trace{flex:1;border-top:1px dashed #c5dace;margin:0 9px}
-.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;border-bottom:1px dashed #d9dce2;padding:15px 0 17px}.summary .lbl{font-size:8px;letter-spacing:1px;color:#949aa3}.summary .val{font-size:19px;color:#3e4650;margin-top:7px;letter-spacing:-.7px}.summary .note{font-size:8px;color:#a2a6ae;margin-top:5px}.dot{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:5px;background:var(--accent)}
-.trade{border:1px solid #e3e7e6;border-radius:8px;background:#fff;padding:16px;margin-top:0}.trade-top{display:flex;justify-content:space-between;align-items:center}.token{font-size:18px;font-weight:700;letter-spacing:-.7px;color:#424850}.gain{font-size:22px;font-weight:600;letter-spacing:-1px}.trade-sub{font-size:9px;color:#9a9fa7;margin:7px 0 14px}.details{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}.detail{font-size:9px;color:#9a9fa7}.detail b{display:block;color:#606773;font-weight:400;margin-top:4px}.route{background:#f2f8f4;border:1px solid #e0ede5;border-radius:8px;padding:16px;height:100%;font-size:9px;color:#80a28d}.route-title{font-size:9px;color:#739480;letter-spacing:1px;margin-bottom:17px}.route-line{display:flex;justify-content:space-between;gap:10px;margin:12px 0}.route-line span:last-child{color:#529877}.route-end{text-align:right;border-top:1px dashed #d4e4d9;padding-top:12px;color:#54a476}.result{display:flex;justify-content:space-between;border-bottom:1px dashed #dadddf;padding:13px 0;color:#9a9ea6;font-size:9px}.result b{color:#59636b;font-weight:500}.section-head{display:flex;justify-content:space-between;color:#7e858f;font-size:9px;letter-spacing:1px;padding:11px 0 4px}.console-row{display:grid;grid-template-columns:58px 64px 1fr auto;gap:9px;align-items:center;border-bottom:1px solid #edefef;padding:10px 0;font-size:9px;color:#858c96}.console-time{color:#a0a5ad}.tag{background:var(--tint);color:var(--accent);font-size:8px;padding:4px 5px;border-radius:3px;display:inline-block;text-align:center}.console-result{color:#76a38b;font-size:8px}.console-message{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.footer{font-size:8px;line-height:1.9;color:#a0a5ad;border-top:1px dashed #dddfe4;padding-top:12px;margin-top:15px}
-.stButton>button{background:#edf6f0!important;border:1px solid #c2dacb!important;color:#53876a!important;border-radius:6px!important;min-height:33px!important;padding:3px 14px!important;box-shadow:none!important}.stButton>button p{font-size:10px!important;color:#53876a!important}.stButton>button:hover{background:#dff0e5!important;border-color:#90bea2!important}
-[data-baseweb="tab-list"]{gap:22px;border-bottom:1px dashed #dcdee3}[data-baseweb="tab"]{font-size:10px!important;color:#858c97!important;background:transparent!important;height:36px}[aria-selected="true"]{color:#527caa!important}[data-baseweb="tab-highlight"]{background:#8aaacb!important;height:1px!important}
-[data-testid="stDataFrame"]{border:1px solid #e7e9ec;border-radius:7px}[data-testid="stSelectbox"] label p{font-size:9px!important}[data-baseweb="select"]>div{background:#fff!important;color:#747d88!important;border-color:#e2e5e9!important;font-size:10px!important}[data-testid="stExpander"]{border-color:#e2e5e9!important;background:#fff}
-@media(max-width:760px){.block-container{padding:1.7rem 1rem}.top{align-items:flex-start}.identity{gap:9px}.pause{width:34px;height:34px;font-size:14px}.brand{font-size:16px}.balance{font-size:21px}.meta{font-size:8px}.stats{font-size:8px}.stage-strip{gap:5px}.stage-card{font-size:8px;padding:8px 4px}.summary{gap:7px}.summary .val{font-size:16px}.summary .lbl{font-size:7px}.console-row{grid-template-columns:45px 55px 1fr;gap:5px}.console-result{display:none}.rail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.seat{padding:9px 7px;gap:7px;min-height:62px}.seat-name{font-size:9px}.pill{display:none}.rail-foot{display:none}.icon{width:26px;height:26px}.seat-sub{font-size:8px}}
-</style>''', unsafe_allow_html=True)
+:root{color-scheme:light!important}.stApp,[data-testid="stAppViewContainer"]{background:#fafafa!important;color:#303941!important}
+body,p,span,label,button,input{font-family:"Noto Sans Bengali","Nirmala UI","Vrinda",system-ui,sans-serif!important}
+[data-testid="stHeader"]{background:transparent}.block-container{max-width:1280px;padding:2rem 1.5rem}
+[data-testid="stVerticalBlock"]{gap:.7rem}p{font-size:14px;color:#4b555f}.mono,.brand,.money,.tiny{font-family:ui-monospace,Consolas,monospace!important}
+.header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px dashed #d4d9df;padding-bottom:16px;margin-bottom:4px}.brand{font-size:23px;font-weight:700;color:#30353e}.brand b{color:#437bdf}.pause{display:inline-grid;place-items:center;background:#eceef1;color:#a1a9b1;border-radius:50%;width:42px;height:42px;margin-right:12px;font-size:18px}.money{font-size:27px;text-align:right}.tiny{font-size:11px;color:#73808c}.green{color:#2d9161}.pink{color:#bf6385}.badge{font-size:11px;color:#54795f;background:#e8f3eb;border:1px solid #c5dfcd;border-radius:5px;padding:4px 7px}
+.current{border:1px solid #afd6c0;border-left:5px solid #5aa97e;border-radius:10px;background:#f1f8f4;padding:20px;margin-bottom:4px}.current.idle{background:#f3f5f8;border-color:#cbd3df;border-left-color:#8c9db5}.eyebrow{font-size:12px;color:#647a6e;font-weight:600}.current h2{font-size:25px;margin:8px 0 10px;line-height:1.4;color:#283c31}.current p{font-size:16px;line-height:1.7;margin:6px 0}.next{margin-top:12px;padding-top:12px;border-top:1px dashed #bfcfc4;color:#54725f;font-size:14px}.finding{background:#fff;border:1px solid #dfebe3;border-radius:6px;padding:10px;font-size:14px;color:#52675a;margin-top:10px}
+.seat{border:1px solid #e0e4e9;background:#fff;border-radius:8px;padding:12px;margin-bottom:8px}.seat.active{background:#edf8f1;border:2px solid #71b68c}.seat.done{border-color:#cce0d2}.seat-head{display:flex;justify-content:space-between;align-items:center;font:600 13px monospace;color:#53566c}.seat p{font-size:12px;margin:5px 0 0;color:#67727e}.status{font-size:11px;color:#8b7d9b;background:#f1edf7;padding:3px 5px;border-radius:4px}.active .status{background:#cfe9d8;color:#256d47}.done .status{background:#ebf3ed;color:#598568}
+[data-testid="stMetric"]{border:1px solid #e2e5e9;background:#fff;border-radius:8px;padding:12px}[data-testid="stMetricValue"]{font-family:monospace;font-size:24px;color:#394b45}[data-testid="stMetricLabel"] p{font-size:12px}
+.stButton>button{background:#edf6f0!important;color:#32684a!important;border:1px solid #b4d4c0!important;border-radius:6px;min-height:40px}.stButton>button p{font-size:14px!important;color:#32684a!important}.stButton>button:disabled{opacity:.5}[data-baseweb="tab"]{font-size:13px!important;color:#647383!important}[data-baseweb="tab-highlight"]{background:#7ba4cb!important}[data-testid="stCaptionContainer"] p{font-size:12px;color:#74818d}
+.log{border-bottom:1px solid #e5e8ec;padding:11px 0;display:grid;grid-template-columns:100px 80px 1fr;gap:12px;font-size:13px;color:#57636d}.log b{color:#69628a;font-family:monospace}.log small{color:#86909a}.log div:last-child{line-height:1.7}.log .decision{color:#557b63}.section{font-size:13px;font-weight:700;letter-spacing:.5px;color:#6c7b87;border-bottom:1px dashed #d9dfe4;padding:12px 0 8px}
+@media(max-width:760px){.block-container{padding:1.6rem .8rem}.brand{font-size:18px}.pause{display:none}.money{font-size:21px}.current{padding:15px}.current h2{font-size:22px}.current p{font-size:15px}.log{grid-template-columns:75px 65px 1fr;font-size:12px;gap:5px}.header{gap:8px}}
+</style>''',unsafe_allow_html=True)
 
-# Callback runs before drawing, keeping every displayed value in sync.
-st.session_state.setdefault('terminal', s)
-PALETTE = {
- 'CHIEF':('#8c9aa7','#edf0f4','⌘','ORCHESTRATOR'),
- 'SCOUT':('#c5a15b','#fbf3df','⌕','SCANNER'),
- 'RISK':('#ce91a5','#fbeef2','◇','RUG CHECK'),
- 'WHALE':('#a390c6','#f1edf9','◉','HOLDER CHECK'),
- 'SNIPER':('#69ac84','#e8f5ed','↗','EXECUTOR'),
- 'RUG':('#cf8ba3','#fbeef2','△','THREAT WATCH'),
- 'EXIT':('#8db3a0','#eef6f0','↳','PAPER EXIT'),
- 'SHILL':('#c6a263','#faf3e5','≋','NARRATIVE'),
- 'SIGNAL':('#9e8ac0','#f1edf8','⌁','SIZER / SIGNAL'),
- 'JOURNAL':('#c5a15e','#faf2df','▤','LOGGER / EQUITY')}
+def html(x):st.markdown(x,unsafe_allow_html=True)
+pnl=round(s['balance']-INITIAL,2)
+html(f'<div class="header"><div><div class="brand"><span class="pause">Ⅱ</span><b>Grok Bot</b> Terminal</div><div class="tiny">PUMPGROK / SYNTHETIC DEMO · UTC+6</div></div><div><div class="money">${s["balance"]:,.2f}</div><div class="tiny">ডেমো balance · {len(s["trades"])} paper trades</div></div></div>')
+st.warning('শুধু অনুশীলন—আসল agent বা বাজারের সঙ্গে সংযোগ নেই। নিচের সব কাজ ও ফল এই UI-এর কৃত্রিম simulation; আসল PumpGrok desk অপরিবর্তিত।')
+if 'previous_demo_summary' in st.session_state:
+ st.caption('নতুন ধাপে-ধাপে UI শুরু হয়েছে। আগের সংস্করণের sample/demo history নতুন user-run cycle থেকে আলাদা করা হয়েছে; এই session-এর হিসাব $10,000 illustrative capital থেকে নতুন করে শুরু।')
 
-def html(value):
-    st.markdown(value, unsafe_allow_html=True)
-
-def chart():
-    eq = pd.DataFrame(s['equity'])
-    low, high = eq['Equity ($)'].min(), eq['Equity ($)'].max()
-    pad = max((high-low)*.3, 15)
-    fig = go.Figure(go.Scatter(x=eq['Cycle'],y=eq['Equity ($)'],customdata=eq['Time'],
-        mode='lines+markers',line=dict(color='#80bd98',width=2),marker=dict(size=4),
-        hovertemplate='DEMO cycle %{x}<br>Equity $%{y:,.2f}<br>%{customdata}<extra></extra>'))
-    fig.update_layout(height=165,margin=dict(l=8,r=8,t=9,b=20),paper_bgcolor='#fafafa',plot_bgcolor='#fafafa',
-        font=dict(family='monospace',size=9,color='#9aa1aa'),showlegend=False,
-        xaxis=dict(title=None,dtick=max(1,s['cycle']//8),gridcolor='#eceef1',zeroline=False),
-        yaxis=dict(title=None,tickprefix='$',range=[low-pad,high+pad],gridcolor='#eceef1',zeroline=False))
-    st.plotly_chart(fig,width='stretch',config={'displayModeBar':False})
-
-# Put the native trigger first in execution; position it below the compact header.
-pnl = round(s['balance']-INITIAL,2)
-wins = sum(t['Net P&L ($)']>0 for t in s['trades'])
-losses = sum(t['Net P&L ($)']<0 for t in s['trades'])
-html(f'''<div class="top"><div class="identity"><div class="pause" aria-label="Decorative pause mark">Ⅱ</div><div><div class="brand"><b>Grok Bot</b> Terminal</div><div class="meta"><span class="running">● Running demo</span> · {now().strftime('%H:%M:%S')} UTC+6 <span class="badge">SIMULATED</span><span class="badge paper">PAPER</span></div></div></div><div class="balance"><small>PAPER BALANCE / USD</small>${s['balance']:,.2f}<div class="stats">{len(s['trades'])} trades · <span class="green">{wins} wins</span> · <span class="pink">{losses} losses</span></div></div></div>''')
-control, context = st.columns([1,2.6])
-with control:
-    st.button('Run Scanner Cycle',on_click=cycle,args=(s,),width='stretch')
-with context:
-    st.caption(f'PUMPGROK / CYCLE {s["cycle"]:03d} · Manual synthetic cycles only · No real agent or market connections')
-rail, body = st.columns([1,3],gap='large')
+if play['running']:
+ idx=play['index']; name,title,action,inputs,result=STAGES[idx]
+ next_text=(f'{STAGES[idx+1][0]} — {STAGES[idx+1][1]}' if idx<9 else 'cycle শেষ; কোনো কাজ চলবে না')
+ current_done=[r for r in play['timeline'] if r['Cycle']==f'DEMO-{play["cycle_id"]:03d}']
+ previous=current_done[-1]['কৃত্রিম ফল / সিদ্ধান্ত'] if current_done else 'এই cycle-এ এখনও কোনো ধাপ শেষ হয়নি।'
+ html(f'<div class="current"><div class="eyebrow">এখন কী হচ্ছে · DEMO-{play["cycle_id"]:03d} · ধাপ {idx+1}/10</div><h2>● {name} — {title}</h2><p>{action}</p><p>{inputs}</p><div class="finding">আগের ধাপের ফল: {escape(previous)}</div><div class="next">এরপর: {next_text}<br>প্রতি প্রায় ২ সেকেন্ডে পরের ধাপ; নিচের বাটন দিয়েও এগোনো যায়।</div></div>')
+else:
+ message='শেষ ডেমো cycle সম্পূর্ণ হয়েছে।' if play['completed'] else 'এখন কোনো কাজ চলছে না—cycle শুরু করুন।'
+ html(f'<div class="current idle"><div class="eyebrow">এখন কী হচ্ছে · IDLE / DEMO</div><h2>{message}</h2><p>দশটি simulated agent-এর কাজ একে একে দেখতে <b>Run Scanner Cycle</b> চাপুন। কোনো আসল agent কাজ শুরু করবে না।</p><div class="next">পরের কাজ: CHIEF পরিকল্পনা → SCOUT নমুনা scan।<br>কোনো background scan বা বাস্তব monitoring চলছে না।</div></div>')
+st.progress(play['index']/10 if (play['running'] or play['completed']) else 0,
+ text=f'ডেমো অগ্রগতি: {play["index"]}/10 ধাপ শেষ')
+a,b,c=st.columns([1.3,1,2])
+with a:st.button('Run Scanner Cycle',on_click=start_cycle,disabled=play['running'],width='stretch')
+with b:st.button('পরের ধাপ',on_click=advance_stage,disabled=not play['running'],width='stretch')
+with c:st.caption('একবারে একটি cycle। শেষ ধাপে ledger একবার লেখা হয়। খোলা browser-এ শুধু এই cycle-এর demo playback চলবে।')
+metrics=st.columns(4)
+metrics[0].metric('অনুশীলনের balance',f'${s["balance"]:,.2f}')
+metrics[1].metric('ডেমো net P&L',f'${pnl:+,.2f}')
+metrics[2].metric('স্ক্যান করা নমুনা pair',s['scanned'])
+metrics[3].metric('বাদ দেওয়া ডেমো ঝুঁকি',s['blocked'])
+if play['running']:st.caption('চলমান cycle-এর ফল এখনও provisional। JOURNAL ধাপ শেষ হলে উপরের হিসাব, equity ও trade log একসঙ্গে আপডেট হবে।')
+rail,body=st.columns([1,2.7],gap='large')
 with rail:
-    html('<div class="kicker">Desk agents / all simulated</div>')
-    cards=[]
-    for name in ROLES:
-        accent,tint,icon,subtitle=PALETTE[name]
-        cards.append(f'<div class="seat {"active" if name=="SNIPER" else ""}" style="--accent:{accent};--tint:{tint}"><div class="icon">{icon}</div><div><div class="seat-name">{name}</div><div class="seat-sub">{subtitle}</div></div><span class="pill">DEMO</span></div>')
-    html('<div class="rail">'+''.join(cards)+'</div><div class="rail-foot">10 / 10 demo seats<br>● CYCLE COMPLETE<br>Real desk hold unchanged<br>No keys · No wallets · No orders</div>')
+ html('<div class="section">কোন agent কী করে · সবই DEMO</div>')
+ for idx,(name,title,action,inputs,result) in enumerate(STAGES):
+  active=play['running'] and play['index']==idx
+  done=(play['running'] and idx<play['index']) or play['completed']
+  status='চলছে · DEMO' if active else ('শেষ · DEMO' if done else 'অপেক্ষা · DEMO')
+  html(f'<div class="seat {"active" if active else "done" if done else ""}"><div class="seat-head">{idx+1:02d} {name}<span class="status">{status}</span></div><p>{title}</p></div>')
 with body:
-    latest=s['trades'][-1]
-    recent=s['scanner'][-6:]
-    blocked=next(r for r in recent if r['Decision']=='BLOCKED')
-    stages=[('SCAN',recent[0]['Demo pair'],'6 synthetic pairs',''),('CHECK',blocked['Demo pair'],'△ risk blocked','bad'),('SIZE',latest['Demo pair'],f"${latest['Notional ($)']:.0f} demo size",''),('EXEC',latest['Demo pair'],'↗ paper closed','good'),('LOG',latest['ID'],'ledger reconciled','')]
-    stage_html=''.join(f'<div class="stage">{name}<div class="stage-card {cls}">{token}<span>{text}</span></div></div>' for name,token,text,cls in stages)
-    html(f'<div class="film"><div class="film-head"><span>● LIVE FILM / SIMULATED PIPELINE</span><strong>CYCLE {s["cycle"]:03d}</strong></div><div class="stage-strip">{stage_html}</div><div class="wire"><span class="pink">△ {s["blocked"]} synthetic threats blocked</span><span class="trace"></span><span class="executor">↗</span><span class="trace"></span><span class="green">PAPER EXECUTOR</span></div></div>')
-    html('<div class="section-head"><span>BLUE EQUITY / REALIZED PAPER CURVE</span><span>USD · NET OF DEMO FEES</span></div>')
-    chart()
-    blocks=[('FILTER / PAIRS',str(s['scanned']),'synthetic pairs scanned','#c8aa69'),('MIXER / BLOCKS',str(s['blocked']),'hypothetical rugs blocked','#cf90a7'),('LOGGER / FILLS',str(len(s['trades'])),'closed paper round trips','#aaa0c9'),('ROUTER / NET P&L',f'${pnl:+,.2f}','0.20% illustrative fees','#80b999')]
-    html('<div class="summary">'+''.join(f'<div><div class="lbl"><span class="dot" style="--accent:{color}"></span>{label}</div><div class="val {"green" if idx==3 and pnl>=0 else ""}">{value}</div><div class="note">{note}</div></div>' for idx,(label,value,note,color) in enumerate(blocks))+'</div>')
-    html('<div class="section-head"><span>LATEST PAPER TRADE</span><span>CLOSED / NO OPEN EXPOSURE</span></div>')
-    trade_col, route_col=st.columns([1.35,1])
-    net=latest['Net P&L ($)']
-    with trade_col:
-        html(f'''<div class="trade"><div class="trade-top"><span class="token">{latest['Demo pair']}</span><span class="gain {'green' if net>=0 else 'pink'}">${net:+.2f}</span></div><div class="trade-sub">{latest['ID']} · synthetic round trip · {latest['Time (UTC+6)']} UTC+6</div><div class="details"><div class="detail">ENTRY<b>${latest['Entry ($)']:.6f}</b></div><div class="detail">EXIT<b>${latest['Exit ($)']:.6f}</b></div><div class="detail">PAPER SIZE<b>${latest['Notional ($)']:.2f}</b></div><div class="detail">FEES / NET RETURN<b>${latest['Fees ($)']:.2f} / {net/latest['Notional ($)']:+.2%}</b></div><div class="detail">REASON<b>Demo threshold passed</b></div><div class="detail">EXECUTION<b>Instant synthetic close</b></div></div></div>''')
-    with route_col:
-        html(f'''<div class="route"><div class="route-title">↗ SIMULATED EXECUTION ROUTE</div><div class="route-line"><span>RISK → SIGNAL</span><span>DEMO CLEAR ✓</span></div><div class="route-line"><span>SIGNAL → SNIPER</span><span>SIZE ${latest['Notional ($)']:.0f}</span></div><div class="route-line"><span>SNIPER → EXIT</span><span>PAPER CLOSED ✓</span></div><div class="route-line"><span>EXIT → JOURNAL</span><span>RECONCILED ✓</span></div><div class="route-end">NO BROADCAST · NO NETWORK</div></div>''')
-    html(f'<div class="result"><span>START <b>${INITIAL:,.2f}</b></span><span>END <b>${s["balance"]:,.2f}</b></span><span class="{"green" if pnl>=0 else "pink"}">NET ${pnl:+,.2f}</span></div>')
-    html('<div class="section-head"><span>TERMINAL / LATEST CYCLE</span><span>CHRONOLOGICAL · UTC+6</span></div>')
-    # One line per seat from the latest cycle, sorted in actual execution order.
-    cycle_events=s['activity'][-50:]
-    seen=set(); selected=[]
-    for entry in reversed(cycle_events):
-        if entry['Agent'] not in seen:
-            seen.add(entry['Agent']);selected.append(entry)
-    rows=[]
-    for entry in reversed(selected):
-        name=entry['Agent']; accent,tint,_,_=PALETTE[name]
-        message=escape(entry['Simulated activity'])
-        result='BLOCK' if name=='RUG' else ('CLOSED' if name in ('EXIT','SNIPER') else 'DEMO')
-        rows.append(f'<div class="console-row"><span class="console-time">{entry["Time (UTC+6)"]}</span><span class="tag" style="--accent:{accent};--tint:{tint}">{name}</span><span class="console-message" title="{message}">{message}</span><span class="console-result">{result}</span></div>')
-    html(''.join(rows))
+ html('<div class="section">এই cycle-এ যা হয়েছে · chronological activity</div>')
+ current_logs=[r for r in play['timeline'] if r['Cycle']==f'DEMO-{play["cycle_id"]:03d}']
+ if not current_logs:st.info('এখনও কোনো ধাপ শেষ হয়নি। cycle শুরু হলে প্রতিটি agent-এর ইনপুট, কাজ ও ডেমো ফল এখানে আসবে।')
+ for r in current_logs:
+  html(f'<div class="log"><div><small>{r["Time (UTC+6)"]}<br>UTC+6</small></div><b>{r["Agent"]}</b><div><strong>{r["কাজ"]} — শেষ</strong><br>{r["ডেমো ইনপুট"]}<br><span class="decision">ফল: {r["কৃত্রিম ফল / সিদ্ধান্ত"]}</span></div></div>')
+ html('<div class="section">Equity curve · শুধু settled demo balance</div>')
+ eq=pd.DataFrame(s['equity']);low=eq['Equity ($)'].min();high=eq['Equity ($)'].max();pad=max((high-low)*.3,15)
+ fig=go.Figure(go.Scatter(x=eq['Cycle'],y=eq['Equity ($)'],mode='lines+markers',line=dict(color='#73ae8b',width=2),
+  hovertemplate='Demo cycle %{x}<br>Paper equity $%{y:,.2f}<extra></extra>'))
+ fig.update_layout(height=210,margin=dict(l=5,r=10,t=10,b=30),paper_bgcolor='#fafafa',plot_bgcolor='#fafafa',
+  font=dict(family='monospace',size=11,color='#76818c'),xaxis=dict(title='Completed demo cycle',dtick=1,gridcolor='#eceef0'),
+  yaxis=dict(title='Paper USD',tickprefix='$',range=[low-pad,high+pad],gridcolor='#eceef0'))
+ st.plotly_chart(fig,width='stretch',config={'displayModeBar':False})
 
-st.caption('ISOLATED PAPER DEMO · Five example cycles preloaded. The feed advances only when you run a cycle. No real market data or trading capabilities.')
-scanner_tab, trades_tab, logs_tab=st.tabs(['Live scanner · simulated','Paper trade log','Agent activity logs'])
-# Explicit light dataframe styling keeps tables legible even if host prefers dark.
-def table(frame,height=260,config=None):
-    styled=frame.style.set_properties(**{'background-color':'#ffffff','color':'#65707c','font-family':'monospace','font-size':'11px'})
-    st.dataframe(styled,hide_index=True,width='stretch',height=height,column_config=config)
+scanner_tab,trades_tab,logs_tab=st.tabs(['নমুনা scanner feed','Paper trade log','সব agent-এর activity'])
+def table(frame):
+ if frame.empty:
+  st.caption('এখনও কোনো settled demo record নেই।');return
+ st.dataframe(frame.style.set_properties(**{'background-color':'white','color':'#4e5b67','font-size':'13px'}),hide_index=True,width='stretch',height=300)
 with scanner_tab:
-    table(pd.DataFrame(s['scanner'][::-1]),config={'Synthetic price ($)':st.column_config.NumberColumn(format='$%.6f')})
+ st.caption('আসল live feed নয়। SCOUT ধাপ শেষ হলে provisional নমুনা দেখা যায়; JOURNAL শেষে settled হয়।')
+ if play['running'] and play['index']>=2:
+  st.caption('চলমান cycle · provisional synthetic candidates')
+  candidates=pd.DataFrame(play['preview']['scanner'][-6:]).copy()
+  if play['index']<3:
+   candidates=candidates.drop(columns=['Decision','Reason','Score'])
+  elif play['index']<7:
+   candidates['Decision']=candidates['Decision'].replace({'PAPER FILLED':'DEMO CANDIDATE'})
+   candidates['Reason']=candidates['Reason'].replace({'Round trip closed':'ডেমো entry এখনও হয়নি'})
+  table(candidates)
+ else:table(pd.DataFrame(s['scanner'][::-1]))
 with trades_tab:
-    table(pd.DataFrame(s['trades'][::-1]),config={k:st.column_config.NumberColumn(format='$%.2f') for k in ['Notional ($)','Fees ($)','Net P&L ($)']})
+ st.caption('কাগুজে round trip; কোনো আসল order নয়। Entry → watch → close → JOURNAL শেষে net fees-সহ ledger লেখা হয়।')
+ table(pd.DataFrame(s['trades'][::-1]))
 with logs_tab:
-    agent=st.selectbox('Filter simulated agent',['All agents']+list(ROLES))
-    logs=[v for v in reversed(s['activity']) if agent=='All agents' or v['Agent']==agent]
-    table(pd.DataFrame(logs[:300]))
-html('<div class="footer">PUMPGROK / GROK BOT TERMINAL · SIMULATED PAPER SANDBOX ONLY<br>Balances and logs are browser-session local, not persisted. New sessions or server restarts reset the demo. All times Asia/Dhaka (UTC+6).</div>')
+ agent=st.selectbox('Filter simulated agent',['All agents']+ORDER)
+ table(pd.DataFrame([r for r in play['timeline'] if agent=='All agents' or r['Agent']==agent]))
+st.caption('SIMULATED PAPER ONLY · Illustrative starting capital $10,000 · Round-trip illustrative fee 0.20% · Session-local history; restart/new session resets it · Asia/Dhaka (UTC+6).')
